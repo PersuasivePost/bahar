@@ -156,7 +156,7 @@ Budget with the static cache warm (geocode + OSM within 7 days):
    rotation + backoff, 7-day cache. Context failure → E = 0, lower confidence, reported in
    `degraded_sources`. Venue-query failure or no venues → `no_venues`.
 3. **Station fusion units and quality.** WAQI values are US-EPA AQI sub-indices. Mitigation:
-   invert the EPA PM2.5 breakpoints to µg/m³, drop readings older than 3 h, clamp bias to
+   invert the EPA PM2.5 breakpoints to µg/m³, drop readings older than 6 h, decay the bias from the observation time, clamp bias to
    [0.5, 2.5] per spec.
 4. **Grounding leaks.** The SLM can write unreferenced names or number words. Mitigation:
    validator rejects Unicode digits (incl. Devanagari), number words from a small en/hi/mr
@@ -173,7 +173,7 @@ Budget with the static cache warm (geocode + OSM within 7 days):
 - Parts of day are sets of start hours; evening = 16–19.
 - Road traffic factor: peak 1.3 = hours with a 1.7 travel multiplier; night 0.6 = 23–06.
 - Exposure sources grouped by (class, name/ref), nearest point per group, top 8.
-- WAQI AQI → µg/m³ via inverted EPA breakpoints; readings older than 3 h dropped.
+- WAQI AQI → µg/m³ via inverted EPA breakpoints; readings older than 6 h dropped; bias decays from observation time.
 - Hours beyond the AQ horizon → AQ unknown + degraded.
 - AQ gate = session mean local PM2.5; WBGT gate = slot maximum hour.
 - Full AskResponse status list: ok, no_safe_window, needs_clarification, out_of_scope, no_venues.

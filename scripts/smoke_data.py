@@ -11,7 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # no installed package
 
-from bahar.config import venues as vcfg  # noqa: E402
+from bahar.config.activities import ACTIVITIES  # noqa: E402
 from bahar.config.sources import CONTEXT_RADIUS_M, IST, MICROCLIMATE_RADIUS_M  # noqa: E402
 from bahar.data.airquality import fetch_air_quality  # noqa: E402
 from bahar.data.elevation import fetch_elevation  # noqa: E402
@@ -57,7 +57,7 @@ async def main(place_text: str, activity: Activity) -> None:
     if place is None:
         print("geocode failed:", degraded_all)
         return
-    radius = search_radius_km(place, vcfg.DEFAULT_RADIUS_KM[activity])
+    radius = search_radius_km(place, ACTIVITIES[activity].radius_km)
     print(f"place   {place.name}\n        ({place.lat:.4f}, {place.lon:.4f}) rank={place.place_rank} "
           f"city={place.is_city} -> radius {radius:g} km")  # fmt: skip
 

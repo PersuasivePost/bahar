@@ -144,6 +144,14 @@ class ParsedQuery(BaseModel):
     lang: Lang
 
 
+class TimeWindow(BaseModel):
+    """Resolved TimeSpec: candidate session start hours (IST, on the hour, never past)."""
+
+    starts: list[datetime]
+    label: str
+    assumptions: list[str] = []
+
+
 # ---------------------------------------------------------------- fetched geography
 
 

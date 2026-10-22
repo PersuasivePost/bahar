@@ -8,8 +8,8 @@ from typing import Any
 
 import httpx
 
+from bahar.config import activities as acfg
 from bahar.config import sources as cfg
-from bahar.config import venues as vcfg
 from bahar.data import cache
 from bahar.data.http import degraded, request
 from bahar.data.result import Fetch
@@ -80,7 +80,8 @@ def _venue_query(activity: Activity, lat: float, lon: float, radius_km: float) -
     around = f"(around:{int(radius_km * 1000)},{lat},{lon})"
     # No `[name]` filter here: it makes Overpass's planner 20x slower on rare tags. Unnamed
     # features are dropped in _parse_venue instead.
-    clauses = "".join(f"nwr[{sel}]{around};" for sel in vcfg.VENUE_SELECTORS[activity])
+    selectors = acfg.ACTIVITIES[activity].venue_selectors
+    clauses = "".join(f"nwr[{sel}]{around};" for sel in selectors)
     return f"[out:json][timeout:{cfg.OVERPASS_SERVER_TIMEOUT_S}];({clauses});out tags bb;"
 
 
@@ -103,7 +104,7 @@ def _bbox_area_km2(bounds: dict[str, float]) -> float:
 def _parse_venue(el: dict[str, Any], lat0: float, lon0: float) -> Venue | None:
     tags: dict[str, str] = el.get("tags", {})
     bounds = el.get("bounds")
-    if "name" not in tags or tags.get("leisure") in vcfg.EXCLUDED_LEISURE:
+    if "name" not in tags or tags.get("leisure") in acfg.EXCLUDED_LEISURE:
         return None
     if "lat" in el:  # node
         lat, lon = el["lat"], el["lon"]
@@ -112,11 +113,16 @@ def _parse_venue(el: dict[str, Any], lat0: float, lon0: float) -> Venue | None:
         lon = (bounds["minlon"] + bounds["maxlon"]) / 2
     else:
         return None
+    kind = _kind(tags)
+    if kind in acfg.NAME_BLOCKLIST_KINDS and acfg.NAME_BLOCKLIST.search(
+        f"{tags['name']} {tags.get('name:en', '')}"
+    ):
+        return None
     access = tags.get("access")
     return Venue(
         id=f"osm:{el['type']}/{el['id']}",
         name=tags.get("name:en") or tags["name"],  # original stays in tags["name"]
-        kind=_kind(tags),
+        kind=kind,
         lat=lat,
         lon=lon,
         area_km2=_bbox_area_km2(bounds) if bounds else None,
@@ -128,7 +134,7 @@ def _parse_venue(el: dict[str, Any], lat0: float, lon0: float) -> Venue | None:
         opening_hours=tags.get("opening_hours"),
         access=access,
         lit={"yes": True, "no": False}.get(tags.get("lit", "")),
-        private=access in vcfg.PRIVATE_ACCESS,
+        private=access in acfg.PRIVATE_ACCESS,
     )
 
 
@@ -137,10 +143,10 @@ def _name_key(name: str) -> str:
     park, point, peak, ...) and glued suffixes (Lohgad -> loh) removed, repeated letters
     collapsed. Falls back to the unstripped form when nothing is left ("Dog Park")."""
     words = _NAME_SPLIT.sub(" ", name.casefold()).split()
-    core = [w for w in words if w not in vcfg.GENERIC_WORDS]
+    core = [w for w in words if w not in acfg.GENERIC_WORDS]
     stripped = []
     for w in core:
-        for suffix in vcfg.GENERIC_SUFFIXES:
+        for suffix in acfg.GENERIC_SUFFIXES:
             if w.endswith(suffix) and len(w) - len(suffix) >= 3:
                 w = w[: -len(suffix)]
                 break
@@ -152,15 +158,15 @@ def _same_place(a: Venue, b: Venue) -> bool:
     """True if two candidates are one real place: close AND similarly named, or a point-mapped
     park lying inside (or within POINT_IN_BBOX_MARGIN_M of) the other's bbox."""
     dist_m = haversine_km(a.lat, a.lon, b.lat, b.lon) * 1000
-    wide = a.kind in vcfg.WIDE_KINDS or b.kind in vcfg.WIDE_KINDS
-    limit = vcfg.MERGE_DISTANCE_WIDE_M if wide else vcfg.MERGE_DISTANCE_M
+    wide = a.kind in acfg.WIDE_KINDS or b.kind in acfg.WIDE_KINDS
+    limit = acfg.MERGE_DISTANCE_WIDE_M if wide else acfg.MERGE_DISTANCE_M
     if dist_m <= limit:
         ratio = SequenceMatcher(None, _name_key(a.name), _name_key(b.name)).ratio()
-        if ratio >= vcfg.MERGE_NAME_RATIO:
+        if ratio >= acfg.MERGE_NAME_RATIO:
             return True
     for point, area in ((a, b), (b, a)):
-        if point.bbox is None and area.bbox is not None and point.kind not in vcfg.WIDE_KINDS:
-            margin = vcfg.POINT_IN_BBOX_MARGIN_M / 111_320
+        if point.bbox is None and area.bbox is not None and point.kind not in acfg.WIDE_KINDS:
+            margin = acfg.POINT_IN_BBOX_MARGIN_M / 111_320
             south, west, north, east = area.bbox
             cos = math.cos(math.radians(point.lat))
             if (
@@ -172,11 +178,11 @@ def _same_place(a: Venue, b: Venue) -> bool:
 
 
 def _min_area_km2(v: Venue, activity: Activity) -> float:
-    if v.kind in vcfg.AREA_EXEMPT_KINDS:
+    if v.kind in acfg.AREA_EXEMPT_KINDS:
         return 0.0
-    if v.kind in vcfg.PARK_KINDS and activity in vcfg.PARK_ACTIVITIES:
-        return vcfg.PARK_MIN_AREA_KM2
-    return vcfg.MIN_AREA_KM2
+    if v.kind in acfg.PARK_KINDS and acfg.ACTIVITIES[activity].park_area_floor:
+        return acfg.PARK_MIN_AREA_KM2
+    return acfg.MIN_AREA_KM2
 
 
 def select_candidates(venues: list[Venue], radius_km: float, activity: Activity) -> list[Venue]:
@@ -199,15 +205,15 @@ def select_candidates(venues: list[Venue], radius_km: float, activity: Activity)
             kept[twin] = kept[twin].model_copy(update={"name": v.name})
 
     def rank(v: Venue) -> float:
-        size = min(1.0, (v.area_km2 or 0.0) / vcfg.RANK_SIZE_SATURATION_KM2)
+        size = min(1.0, (v.area_km2 or 0.0) / acfg.RANK_SIZE_SATURATION_KM2)
         point_penalty = (
-            vcfg.POINT_RANK_PENALTY
-            if v.area_km2 is None and v.kind in vcfg.PARK_KINDS
+            acfg.POINT_RANK_PENALTY
+            if v.area_km2 is None and v.kind in acfg.PARK_KINDS
             else 0.0
         )
-        return v.distance_km / radius_km - vcfg.RANK_SIZE_BONUS * size + point_penalty
+        return v.distance_km / radius_km - acfg.RANK_SIZE_BONUS * size + point_penalty
 
-    return sorted(kept, key=rank)[: vcfg.MAX_CANDIDATES]
+    return sorted(kept, key=rank)[: acfg.MAX_CANDIDATES]
 
 
 async def fetch_venues(

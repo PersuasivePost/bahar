@@ -208,8 +208,9 @@ Evidence.
   hours (no AQ gate, no dose) and `airquality` listed in `degraded_sources`.
 - Station bias: nearest ≤ 3 stations within 15 km (WAQI; OpenAQ fallback), IDW-averaged
   current PM2.5. WAQI reports US-EPA AQI sub-indices, not µg/m³: convert by inverting the
-  US EPA PM2.5 AQI breakpoints. Drop readings observed more than 3 h ago. bias₀ = clamp(station_now / cams_now, 0.5, 2.5);
-  bias(h) = 1 + (bias₀ − 1)·exp(−hours_ahead / 12). No stations → bias 1, wider band.
+  US EPA PM2.5 AQI breakpoints. Drop readings observed more than 6 h ago. bias₀ = clamp(station_obs / cams_at_obs_hour, 0.5, 2.5);
+  bias(h) = 1 + (bias₀ − 1)·exp(−(h − t_obs) / 12 h), t_obs = IDW-weighted mean observation
+  time (the decay starts at the observation, not at now). No stations → bias 1, wider band.
 - Local: PM_local(h) = PM_bg(h) · bias(h) · (1 + 0.35·E(h)), minus a green bonus of at most
   5% when green share within 500 m > 40%.
 - Band: ±(20% + 10% per 24 h ahead), +15% when no station was available.

@@ -20,7 +20,7 @@ HOST_MIN_INTERVAL_S: Final[dict[str, float]] = {
 }
 
 # Bump when a fetcher's parsing / selection changes so stale cached results are not reused.
-CACHE_VERSION: Final = 2
+CACHE_VERSION: Final = 3
 
 # ---- cache TTLs (CLAUDE.md: live <= 15 min, static geography <= 7 days)
 LIVE_TTL_S: Final = 15 * 60
@@ -72,7 +72,9 @@ OPENAQ_PM25_PARAMETER_ID: Final = 2
 STATION_RADIUS_KM: Final = 15.0
 STATIONS_PER_VENUE: Final = 3
 MAX_STATION_FEEDS: Final = 8  # cap on per-station requests per query
-STATION_MAX_AGE_H: Final = 3.0
+# 6 h, not 3: OpenAQ / WAQI feeds for Indian stations often lag 2-5 h. The bias still decays
+# from the observation time (weights.STATION_BIAS_DECAY_H), so an older reading counts less.
+STATION_MAX_AGE_H: Final = 6.0
 STATION_TIMEOUT_S: Final = 8.0
 
 # US EPA PM2.5 AQI breakpoints (pre-2024 table, which WAQI documents at aqicn.org/faq):
