@@ -82,6 +82,7 @@ class ReasonCode(StrEnum):
     cloud_colour = "cloud_colour"
     rush_hour = "rush_hour"
     profile = "profile"
+    access = "access"
 
 
 class SourceKey(StrEnum):
@@ -436,6 +437,7 @@ class ScoredSlot(BaseModel):
     pm25_mean: float | None = None
     wbgt_max: float
     rain_prob_max: float
+    exposure_mean: float = 0.0
     dose_pct: float | None = None
 
 
@@ -475,6 +477,37 @@ class Recommendation(BaseModel):
     improves_at: datetime | None = None
     window_label: str
     confidence: float = Field(ge=0, le=1)
+
+
+class EngineInput(BaseModel):
+    """Everything the pure engine needs: fetched data + the resolved request. Serialisable, so
+    fine-tuning data can be generated offline by replaying the real engine."""
+
+    parsed: ParsedQuery
+    activity: Activity
+    place: Place
+    radius_km: float
+    venues: list[Venue]
+    window: TimeWindow
+    context: ContextData | None = None
+    forecast: Forecast
+    air_quality: AirQualityForecast | None = None
+    stations: StationSet | None = None
+    travel: list[TravelTime] | None = None
+    degraded: list[DegradedSource] = []
+    now: datetime  # IST, aware
+
+
+class EngineResult(BaseModel):
+    recommendation: Recommendation | None = None  # None: no venue had forecast data
+    advice: Advice | None = None
+    slots: list[ScoredSlot] = []  # every scored (venue, start) in the window
+    hourly: list[HourConditions] = []
+    sources: dict[str, list[PollutionSource]] = {}  # venue id -> exposure sources (map)
+    venue_refs: dict[str, str] = {}  # venue id -> v# evidence id
+    evidence: list[Evidence] = []
+    assumptions: list[str] = []
+    notes: list[str] = []  # e.g. the medical disclaimer
 
 
 # ---------------------------------------------------------------- API

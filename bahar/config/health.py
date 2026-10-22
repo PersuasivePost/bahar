@@ -1,10 +1,13 @@
 """Health / age profiles (CLAUDE.md profile table). When several match, the strictest applies.
 
-AQ limits are on session-mean local PM2.5 (µg/m³). The default 90 is the top of NAQI
-"Moderate"; sensitive groups stop at 60, the top of "Satisfactory" — CPCB's NAQI health
-statements flag Moderate air as causing breathing discomfort for people with lung and heart
-disease, children and older adults. High-intensity sessions roughly double or triple minute
-ventilation, hence the tighter second limit.
+AQ limits are hard gates on session-mean local PM2.5 (µg/m³). The default 120 is the top of
+NAQI "Poor"; sensitive groups stop at 90, the top of "Moderate" — CPCB's NAQI health
+statements flag Poor air as causing breathing discomfort for most people on prolonged
+exposure, and Moderate air for people with lung and heart disease, children and older
+adults. High-intensity sessions roughly double or triple minute ventilation, hence the
+tighter second limit (one NAQI band lower). Retuned in Step 5: the earlier 90/60 · 60/45
+limits gated out nearly every hour in Indian cities; below the limit, a soft penalty from
+30 µg/m³ (weights.AQ_PENALTY_FLOOR) still makes cleaner slots win clearly.
 WBGT stops follow the ACSM position stand on exertional heat illness (2007) and the
 heat-stress guidance of Sports Medicine Australia: cancel strenuous activity around 30-32 °C
 for healthy adults, ~2-4 °C lower for people with reduced heat tolerance.
@@ -38,30 +41,30 @@ PROFILES: Final[dict[str, HealthProfile]] = {
     p.key: p
     for p in (
         HealthProfile(
-            key="default", pm25_limit=90, pm25_limit_high=60, wbgt_stop=32, wbgt_stop_high=30,
+            key="default", pm25_limit=120, pm25_limit_high=90, wbgt_stop=32, wbgt_stop_high=30,
             uv_threshold=UV_THRESHOLD_DEFAULT, disclaimer=False,
         ),
         HealthProfile(
-            key="asthma_copd", pm25_limit=60, pm25_limit_high=45, wbgt_stop=30,
+            key="asthma_copd", pm25_limit=90, pm25_limit_high=60, wbgt_stop=30,
             wbgt_stop_high=30, uv_threshold=UV_THRESHOLD_DEFAULT,
             extras=frozenset({"inhaler", "warm_up", "avoid_near_road_hours"}),
         ),
         HealthProfile(
-            key="heart", pm25_limit=60, pm25_limit_high=45, wbgt_stop=28, wbgt_stop_high=28,
+            key="heart", pm25_limit=90, pm25_limit_high=60, wbgt_stop=28, wbgt_stop_high=28,
             uv_threshold=UV_THRESHOLD_DEFAULT,
             extras=frozenset({"avoid_high_intensity_in_heat"}),
         ),
         HealthProfile(
-            key="senior", pm25_limit=60, pm25_limit_high=45, wbgt_stop=28, wbgt_stop_high=28,
+            key="senior", pm25_limit=90, pm25_limit_high=60, wbgt_stop=28, wbgt_stop_high=28,
             uv_threshold=UV_THRESHOLD_DEFAULT,
             extras=frozenset({"prefer_flat_shaded_close"}),
         ),
         HealthProfile(
-            key="child", pm25_limit=60, pm25_limit_high=45, wbgt_stop=28, wbgt_stop_high=28,
+            key="child", pm25_limit=90, pm25_limit_high=60, wbgt_stop=28, wbgt_stop_high=28,
             uv_threshold=UV_THRESHOLD_CHILD, extras=frozenset({"shorter_sessions"}),
         ),
         HealthProfile(
-            key="pregnancy", pm25_limit=60, pm25_limit_high=45, wbgt_stop=28,
+            key="pregnancy", pm25_limit=90, pm25_limit_high=60, wbgt_stop=28,
             wbgt_stop_high=28, uv_threshold=UV_THRESHOLD_DEFAULT,
             extras=frozenset({"avoid_high_intensity_in_heat", "hydration"}),
         ),

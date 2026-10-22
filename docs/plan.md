@@ -13,6 +13,10 @@ As in CLAUDE.md, plus three modules:
   would each repeat the same code.
 - `bahar/engine/access.py` — minimal OSM `opening_hours` parser (`24/7`,
   `Mo-Su 05:00-21:00`, day lists, `sunrise-sunset`); unparseable → open + assumption.
+- `bahar/engine/conditions.py` — assembles the per-venue hourly `HourConditions` grid
+  (forecast + exposure + AQ + WBGT + sun + ground + traffic) and cites its values (Step 5).
+- `bahar/engine/run.py` — the whole engine as one pure function `EngineInput → EngineResult`,
+  so fine-tuning data can replay the real engine offline (Step 5).
 - `bahar/llm/prompts.py` — the static parser and composer prefixes (system prompt +
   few-shots), kept separate so their KV states can be saved and restored.
 

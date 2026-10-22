@@ -154,13 +154,21 @@ def _name_key(name: str) -> str:
     return _REPEATS.sub(r"\1", "".join(stripped or words))
 
 
+def _boxes_overlap(a: tuple[float, float, float, float], b: tuple[float, float, float, float]) -> bool:
+    """(south, west, north, east) boxes intersect."""
+    return a[0] <= b[2] and b[0] <= a[2] and a[1] <= b[3] and b[1] <= a[3]
+
+
 def _same_place(a: Venue, b: Venue) -> bool:
     """True if two candidates are one real place: close AND similarly named, or a point-mapped
     park lying inside (or within POINT_IN_BBOX_MARGIN_M of) the other's bbox."""
     dist_m = haversine_km(a.lat, a.lon, b.lat, b.lon) * 1000
     wide = a.kind in acfg.WIDE_KINDS or b.kind in acfg.WIDE_KINDS
     limit = acfg.MERGE_DISTANCE_WIDE_M if wide else acfg.MERGE_DISTANCE_M
-    if dist_m <= limit:
+    # Similar names AND (close OR overlapping boxes: big polygons mapped twice, e.g. a golf
+    # course as both the club and the course, have centroids far apart).
+    overlap = a.bbox is not None and b.bbox is not None and _boxes_overlap(a.bbox, b.bbox)
+    if dist_m <= limit or overlap:
         ratio = SequenceMatcher(None, _name_key(a.name), _name_key(b.name)).ratio()
         if ratio >= acfg.MERGE_NAME_RATIO:
             return True

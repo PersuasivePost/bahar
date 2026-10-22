@@ -165,12 +165,17 @@ comment with the reasoning or source.
 
 | profile | AQ limit: local PM2.5 µg/m³ (normal / high-intensity) | WBGT stop °C | extras |
 |---|---|---|---|
-| default adult | 90 / 60 | 32 (high intensity 30) | — |
-| asthma / COPD | 60 / 45 | 30 | inhaler, warm-up, avoid near-road hours |
-| heart condition | 60 / 45 | 28 | avoid high intensity in heat |
-| senior (60+) | 60 / 45 | 28 | prefer flat, shaded, close venues |
-| child (< 12) | 60 / 45 | 28 | UV threshold 6, shorter sessions |
-| pregnancy | 60 / 45 | 28 | avoid high intensity in heat, hydration |
+| default adult | 120 / 90 | 32 (high intensity 30) | — |
+| asthma / COPD | 90 / 60 | 30 | inhaler, warm-up, avoid near-road hours |
+| heart condition | 90 / 60 | 28 | avoid high intensity in heat |
+| senior (60+) | 90 / 60 | 28 | prefer flat, shaded, close venues |
+| child (< 12) | 90 / 60 | 28 | UV threshold 6, shorter sessions |
+| pregnancy | 90 / 60 | 28 | avoid high intensity in heat, hydration |
+
+AQ limits are hard gates on the session-mean local PM2.5 (central estimate; the uncertainty
+band is shown in Evidence). Below the limit a soft penalty grows linearly from 30 µg/m³
+(top of NAQI "Good") to the limit, so cleaner slots still win clearly. (Retuned in Step 5:
+the stricter 90/60 · 60/45 limits gated out nearly every hour in Indian cities.)
 
 Any health profile adds: "Not medical advice — follow your doctor's guidance."
 Condition `other` (unrecognised condition) applies the asthma/COPD limits as the cautious

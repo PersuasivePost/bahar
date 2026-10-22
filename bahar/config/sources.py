@@ -21,7 +21,7 @@ HOST_MIN_INTERVAL_S: Final[dict[str, float]] = {
 }
 
 # Bump when a fetcher's parsing / selection changes so stale cached results are not reused.
-CACHE_VERSION: Final = 4
+CACHE_VERSION: Final = 5
 
 # ---- cache TTLs (CLAUDE.md: live <= 15 min, static geography <= 7 days)
 LIVE_TTL_S: Final = 15 * 60

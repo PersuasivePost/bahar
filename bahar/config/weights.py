@@ -137,6 +137,26 @@ WBGT_FLAGS: Final[tuple[tuple[float, HeatFlag], ...]] = (
     (23, HeatFlag.moderate), (float("-inf"), HeatFlag.low),
 )  # fmt: skip
 
+# Globe-temperature energy balance (Liljegren et al. 2008, J. Occup. Environ. Hyg. 5:645,
+# eq. for the black globe), standard 150 mm globe; forced convection per ISO 7726 (1998)
+# h = 6.3 u^0.6 / D^0.4 W/m2K. Open-Meteo wind is at 10 m; scaled to 2 m with a log profile
+# over z0 = 0.1 m (ln(2/0.1) / ln(10/0.1) = 0.65). Liljegren's 0.5 m/s floor on wind.
+GLOBE_DIAMETER_M: Final = 0.15
+GLOBE_EMISSIVITY: Final = 0.95
+GLOBE_ALBEDO: Final = 0.05
+SURFACE_ALBEDO: Final = 0.45
+WIND_10M_TO_2M: Final = 0.65
+MIN_WIND_MS: Final = 0.5
+# Below ~5 deg sun elevation the 1/cos(zenith) direct-beam term diverges; Liljegren caps the
+# zenith angle at 89.5 deg, we cap cos(zenith) at sin(5 deg) since hourly radiation is tiny then.
+MIN_COS_ZENITH: Final = 0.087
+ABSOLUTE_ZERO_C: Final = -273.15
+
+# ---------------------------------------------------------------- sun / light
+# astral conventions: golden hour = sun elevation -4..6 deg, blue hour = -6..-4 deg.
+GOLDEN_ELEV: Final = (-4.0, 6.0)
+BLUE_ELEV: Final = (-6.0, -4.0)
+
 # ---------------------------------------------------------------- weather gates
 
 THUNDER_CODES: Final = frozenset({95, 96, 99})  # WMO weather codes (Open-Meteo)
@@ -152,6 +172,17 @@ RAIN_LIGHT_BLOCKED: Final = frozenset({Activity.tennis, Activity.cricket, Activi
 RAIN_BLOCK_MM: Final = 2.5  # blocks everything else (AMS glossary: > 2.5 mm/h is "moderate rain")
 WIND_PENALTY_SHARE: Final = 0.8  # penalty above 80 % of the activity limit
 DUSK_GRACE_MIN: Final = 30  # dusk_ok activities may run until sunset + 30 min
+# ... and may start from sunrise - 30 min (civil dawn: enough light to see the path).
+DAWN_GRACE_MIN: Final = 30
+# Running / walking / cycling (light rule dusk_ok) beyond the dusk grace: urban parks and
+# tracks are usually used after dark, so darkness is a soft penalty, not a gate — unless the
+# venue is mapped lit=no or is not urban (no street lighting, uneven ground, safety).
+DARK_PENALTY_LIT: Final = 6.0  # lit=yes
+DARK_PENALTY_UNLIT_UNKNOWN: Final = 12.0  # no lit tag
+NON_URBAN_KINDS: Final = frozenset(
+    {"nature_reserve", "protected_area", "national_park", "fort", "peak", "beach"}
+)  # a beach counts as urban only when tagged lit=yes
+EVENING_OK_END_HOUR: Final = 23  # evening_ok: the night part's last start is 22:00
 
 # ---------------------------------------------------------------- ground condition
 
@@ -170,3 +201,80 @@ ADVICE_ELECTROLYTES_WBGT: Final = 28.0
 ADVICE_SUNSCREEN_UV: Final = 6.0
 ADVICE_RAIN_GEAR_PROB: Final = (30.0, 60.0)
 ADVICE_N95_PM25: Final = 60.0
+
+# Advice: high exposure means a strong upwind source (E = tanh(E_raw) >= 0.5, E_raw >= 0.55,
+# e.g. a trunk road ~150 m upwind at moderate wind).
+ADVICE_N95_EXPOSURE: Final = 0.5
+ADVICE_DUSK_WINDOW_MIN: Final = 60  # insects: session within an hour of sunset
+ADVICE_GREEN_SHARE: Final = 0.40
+WIND_SHIFT_DEG: Final = 45.0  # watch_for: wind turns by at least this between hours
+WIND_SHIFT_MIN_KMH: Final = 5.0  # ... at a speed where direction means something
+HEAT_WATCH_LOOKAHEAD_H: Final = 3  # heat rising: look this far past the session end
+
+# ---------------------------------------------------------------- scoring (soft score 0-100)
+# Points are heuristic weights chosen so that a hard-gate-level problem costs about as much as
+# the largest single penalty, and the ordering of the factors matches health priority:
+# air / heat > storms / rain > travel > comfort bonuses.
+
+# Air quality: 0 at 30 µg/m³ (top of NAQI "Good"), linear to AQ_PENALTY_AT_LIMIT at the
+# profile's hard limit, same slope above it (so the least-bad of all-gated slots is the
+# cleanest one).
+AQ_PENALTY_FLOOR: Final = 30.0
+AQ_PENALTY_AT_LIMIT: Final = 40.0
+# Session AQ unknown (beyond the CAMS horizon): a mid-range penalty, so unknown air does not
+# out-rank known moderate air.
+AQ_UNKNOWN_PENALTY: Final = 15.0
+# Near-road pollutants that the PM2.5 uplift misses (NO2, ultrafine particles; Karner 2010):
+# penalty = max * session-mean E. Profiles with "avoid_near_road_hours" weigh it 1.5x.
+EXPOSURE_PENALTY_MAX: Final = 10.0
+EXPOSURE_SENSITIVE_MULT: Final = 1.5
+# Inhaled dose share of the reference day (soft only, CLAUDE.md "Inhaled dose").
+DOSE_PENALTY_PER_PCT: Final = 0.1
+DOSE_PENALTY_MAX: Final = 10.0
+# Heat: 0 at WBGT 23 °C (flag "moderate" starts), linear to HEAT_PENALTY_AT_STOP at the
+# profile's WBGT stop.
+HEAT_PENALTY_FLOOR_WBGT: Final = 23.0
+HEAT_PENALTY_AT_STOP: Final = 25.0
+UV_PENALTY: Final = 6.0
+THUNDER_PENALTY: Final = 40.0  # activities thunder does not block outright
+CAPE_PENALTY: Final = 10.0
+# Above the activity max: base + per % over it (small base: no cliff at the limit itself).
+RAIN_PROB_PENALTY_BASE: Final = 2.0
+RAIN_PROB_PENALTY_PER_PCT: Final = 0.5
+RAIN_PROB_PENALTY_MAX: Final = 25.0
+WIND_PENALTY: Final = 10.0
+WET_GROUND_PENALTY: Final = 10.0
+SLIPPERY_TRAIL_PENALTY: Final = 8.0
+# Travel: a gentle preference for closer venues, then a steeper one beyond
+# TRAVEL_PENALTY_SHARE x activity duration.
+TRAVEL_BASE_PER_MIN: Final = 0.1
+TRAVEL_BASE_MAX: Final = 6.0
+TRAVEL_EXCESS_PER_MIN: Final = 0.4
+TRAVEL_EXCESS_MAX: Final = 20.0
+TRAVEL_SENIOR_MULT: Final = 1.5  # "prefer close venues"
+PRIVATE_ACCESS_PENALTY: Final = 10.0  # members-only golf courses etc.: entry not guaranteed
+# Heart / pregnancy "avoid high intensity in heat": high-intensity sessions from WBGT 25 °C
+# (heat-stress risk rises sharply from the moderate flag up).
+HEAT_INTENSITY_WBGT: Final = 25.0
+HEAT_INTENSITY_PENALTY: Final = 15.0
+# Bonuses
+GREEN_BONUS_MAX: Final = 6.0  # shade and cooler air
+GREEN_BONUS_SHARE: Final = (0.2, 0.6)  # ramp from / full at this green share within 500 m
+GOLDEN_HOUR_BONUS: Final = 15.0
+BLUE_HOUR_BONUS: Final = 8.0
+CLOUD_COLOUR_BONUS: Final = 5.0
+CLOUD_COLOUR_RANGE: Final = (20.0, 60.0)  # % cover that lights up a sunset / sunrise sky
+# Hard-gate priority when merging blocked hours into avoid ranges (most serious first).
+GATE_PRIORITY: Final = (
+    "thunderstorm", "rain", "wind", "heat", "air_quality", "darkness", "closed", "outside_radius",
+)  # fmt: skip
+MAX_AVOID_RANGES: Final = 3  # longest first
+
+# ---------------------------------------------------------------- recommendation
+ALT_TIME_MIN_GAP_H: Final = 2  # prefer an alternative time that does not overlap the best
+IMPROVE_SEARCH_H: Final = 48  # no_safe_window: look this far past the window for a safe start
+# Confidence starts at 1 and drops per degraded source (stage name -> penalty).
+CONFIDENCE_PENALTY: Final[dict[str, float]] = {
+    "context": 0.2, "airquality": 0.2, "stations": 0.1, "routing": 0.05, "forecast": 0.5,
+}  # fmt: skip
+CONFIDENCE_FLOOR: Final = 0.2
