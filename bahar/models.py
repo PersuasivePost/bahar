@@ -173,10 +173,14 @@ class Venue(BaseModel):
 
 class PollutionSource(BaseModel):
     cls: str
-    name: str | None = None
+    name: str | None = None  # OSM name, else ref; None for unnamed features
+    aliases: list[str] = []  # names of same-class groups merged into this one (one corridor)
     weight: float
-    distance_m: float
-    bearing_deg: float
+    distance_m: float  # venue centroid -> nearest point of the source group
+    bearing_deg: float  # venue -> that nearest point
+    lat: float  # the nearest point itself
+    lon: float
+    evidence_id: str
 
 
 class VenueContext(BaseModel):
@@ -185,8 +189,10 @@ class VenueContext(BaseModel):
     green_share_500m: float = 0.0
     water_share_500m: float = 0.0
     near_water: bool = False
+    water_distance_m: float | None = None  # None = no water mapped within 500 m
     travel_min: float | None = None
     travel_estimated: bool = False
+    evidence_ids: dict[str, str] = {}  # "green_share" | "water_share" | "water_distance" -> id
 
 
 class Place(BaseModel):
@@ -271,7 +277,24 @@ class StationReading(BaseModel):
     aqi_pm25: int | None = None  # WAQI sub-index the value was inverted from
     observed_at: datetime
     source: Literal["waqi", "openaq"]
-    attribution: str | None = None  # station originator
+    provider: str | None = None  # originator / owner, e.g. "CPCB / Maharashtra Pollution Control Board"
+    regulatory: bool  # reference monitor (CPCB, SPCB, IITM, US consulate) vs low-cost sensor
+
+
+class StaleStation(BaseModel):
+    """A station inside the search radius whose last report is older than the freshness limit."""
+
+    name: str
+    provider: str | None = None
+    regulatory: bool
+    last_seen: datetime
+    distance_km: float  # to the nearest candidate venue
+
+
+class StationSet(BaseModel):
+    fetched_at: datetime
+    readings: list[StationReading]  # fresh only
+    stale: list[StaleStation] = []  # nearest stale ones, kept when nothing fresh exists
 
 
 class TravelTime(BaseModel):
@@ -296,6 +319,47 @@ class ContextData(BaseModel):
 
 
 # ---------------------------------------------------------------- engine output
+
+
+class SourceContribution(BaseModel):
+    source: int  # index into VenueContext.sources
+    term: float  # w * a * k * s * traffic: this source's share of E_raw
+    evidence_id: str
+
+
+class HourExposure(BaseModel):
+    venue_id: str
+    t: datetime  # IST
+    exposure: float  # E(h) = tanh(E_raw) in [0, 1)
+    top: list[SourceContribution]  # up to 3, largest first
+    evidence_id: str
+
+
+class StationBias(BaseModel):
+    """Ground-station correction for one venue: bias0 at t_obs, decaying afterwards."""
+
+    venue_id: str
+    station_pm25: float  # IDW mean of the stations used
+    cams_pm25: float  # CAMS at the venue at the observation hour
+    bias0: float  # clamped ratio
+    t_obs: datetime  # IDW-weighted mean observation time
+    low_cost: bool  # a low-cost sensor contributed
+    station_evidence_ids: list[str]
+    evidence_id: str
+
+
+class HourAirQuality(BaseModel):
+    venue_id: str
+    t: datetime  # IST
+    pm25_bg: float | None = None  # None beyond the CAMS horizon -> AQ unknown
+    pm10_bg: float | None = None
+    bias: float = 1.0
+    pm25_local: float | None = None
+    pm25_low: float | None = None
+    pm25_high: float | None = None
+    pm10_local: float | None = None
+    naqi: NaqiCategory | None = None  # worse of the PM2.5 and PM10 categories, indicative
+    evidence_ids: dict[str, str] = {}  # field name -> evidence id
 
 
 class HourConditions(BaseModel):

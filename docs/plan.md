@@ -131,7 +131,7 @@ Budget with the static cache warm (geocode + OSM within 7 days):
 | parser: ~40 query tokens to evaluate, ~60 output tokens | serial | 6 s |
 | geocode | serial | 1 s |
 | Overpass venues | serial | 3 s (timeout 12 s) |
-| context + weather + AQ + stations + OSRM | parallel | 5 s (context timeout 10 s, then degrade) |
+| context + weather + AQ + stations + OSRM | parallel | 5 s warm (context cold: 12 s attempt on the last-good mirror + one retry on another, 20 s total, then degrade) |
 | engine (12 venues × ≤ 48 h) | CPU | 1 s |
 | composer: ≤ 350-token facts block at ~80 tok/s, ≤ 160 output tokens at ~12 tok/s | serial | 14 s |
 | validate + render + overhead | — | 1 s |

@@ -110,8 +110,9 @@ async def main(place_text: str, activity: Activity) -> None:
         past_rain = sum(h.rain_mm or 0 for h in vw.hours if h.t < now)
         print(f"  past-48h rain at first venue: {past_rain:.1f} mm")
 
-    print(f"\nstations: {len(stations or [])}")
-    for s in stations or []:
+    readings = stations.readings if stations else []
+    print(f"\nstations: {len(readings)}")
+    for s in readings:
         print(f"  {s.source} {s.name[:44]:44} PM2.5 {s.pm25_ugm3:6.1f} µg/m³"
               + (f" (AQI {s.aqi_pm25})" if s.aqi_pm25 is not None else "")
               + f" obs {s.observed_at.astimezone(IST):%H:%M} IST")  # fmt: skip

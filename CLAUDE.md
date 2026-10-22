@@ -180,23 +180,30 @@ default and is recorded as an assumption.
 
 Sources within 2 km of a venue, with weights w: highway motorway 1.0, trunk 0.8,
 primary 0.5, secondary 0.25; landuse=industrial 0.9 × min(1, √area_km²);
-landuse=landfill 1.0; landuse=construction 0.5; landuse=quarry 0.6; power=plant with a
+landuse=landfill 1.0; landuse=construction 0.35 (OSM construction tags are often
+stale); landuse=quarry 0.6; power=plant with a
 fossil source 1.0.
 
 Group candidate features by (class, name or ref) so one road split into many OSM ways counts
 once; unnamed features group by class + OSM id. For each group, take the nearest point to the
 venue: distance d (m) and bearing β (venue → source). Keep the 8 groups with the highest
-w·exp(−d/400). Distances are measured from the venue centroid — a documented limitation for
+w·exp(−d/400), after a corridor dedupe: walking the groups by that score, drop a group whose
+nearest point lies within 60 m of an already-kept group of the same class (separately
+mapped carriageways, unnamed slip roads, twin names for one corridor such as JVLR /
+Adi Sankaracharya Marg). The higher-weight group survives (ties: higher score); a dropped
+group's different name is recorded as an alias in its Evidence. Distances are measured from the venue centroid — a documented limitation for
 very large venues (e.g. Aarey). For hour h with wind-from direction θ and speed u (m/s):
 
 - upwind alignment a = exp(−Δ² / (2·30²)), Δ = smallest angle between β and θ (degrees)
-- if u < 1 m/s (stagnant): a = 0.5 for every source, stagnation factor s = 1.3;
-  else s = clamp(3 / (u + 2), 0.4, 1.0)
+- calm-wind blend (no step at 1 m/s): blend = clamp((u − 0.5) / 1.5, 0, 1);
+  a = blend·a_directional + (1 − blend)·0.5; s = blend·clamp(3 / (u + 2), 0.4, 1.0) +
+  (1 − blend)·1.3. Missing wind → blend 0. Venue centroid inside the source → a = 1.
 - distance decay k = exp(−d / 400) (near-road pollution gradients largely fade within a few
   hundred metres)
-- road traffic factor by hour (roads only; 1.0 for other sources): peak 1.3 = hours whose
-  travel multiplier is 1.7 (see Travel); night 0.6 = 23:00–06:00; otherwise 1.0
-- E_raw(h) = Σ w·a·k·s·traffic; E(h) = tanh(E_raw) ∈ [0, 1)
+- hourly activity factor f: roads — peak 1.3 = hours whose travel multiplier is 1.7 (see
+  Travel), night 0.6 = 23:00–06:00, otherwise 1.0; construction — 1.0 for 08:00–20:00,
+  0.3 otherwise (no dust at night); other sources 1.0
+- E_raw(h) = Σ w·a·k·s·f; E(h) = tanh(E_raw) ∈ [0, 1)
 
 Keep the top 3 contributors per hour (name/class, distance, bearing, compass word) as
 Evidence.

@@ -64,6 +64,7 @@ async def _fetch(venues: Sequence[Venue]) -> Fetch[AirQualityForecast]:
             "hourly": ",".join(cfg.AIR_QUALITY_HOURLY),
             "timezone": cfg.TIMEZONE,
             "forecast_days": cfg.AQ_FORECAST_DAYS,
+            "past_days": cfg.AQ_PAST_DAYS,
         },
     )  # fmt: skip
     if failure:

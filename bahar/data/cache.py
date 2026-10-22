@@ -32,8 +32,15 @@ def make_key(namespace: str, **parts: Any) -> str:
     return f"{namespace}:v{CACHE_VERSION}:{hashlib.sha1(blob.encode()).hexdigest()}"
 
 
-async def cached(key: str, ttl_s: int, fetch: Callable[[], Awaitable[Fetch[T]]]) -> Fetch[T]:
-    """Return the cached Fetch or run `fetch`. Only clean successes are stored."""
+async def cached(
+    key: str,
+    ttl_s: int,
+    fetch: Callable[[], Awaitable[Fetch[T]]],
+    keep_empty: bool = False,
+) -> Fetch[T]:
+    """Return the cached Fetch or run `fetch`. Only clean successes are stored, plus, with
+    `keep_empty`, results whose only problems are "empty" answers (a real "no data" that
+    would be the same on the next call); timeouts and HTTP errors are never stored."""
     started = time.perf_counter()
     hit: Fetch[T] | None = await asyncio.to_thread(_cache().get, key)
     if hit is not None:
@@ -42,6 +49,7 @@ async def cached(key: str, ttl_s: int, fetch: Callable[[], Awaitable[Fetch[T]]])
         )
     result = await fetch()
     result.elapsed_ms = int((time.perf_counter() - started) * 1000)
-    if result.value is not None and not result.degraded:
+    clean = not result.degraded or (keep_empty and all(d.reason == "empty" for d in result.degraded))
+    if result.value is not None and clean:
         await asyncio.to_thread(_cache().set, key, result, expire=ttl_s)
     return result

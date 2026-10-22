@@ -1,5 +1,6 @@
 """Endpoints, rate limits, retry policy and cache TTLs for the data layer."""
 
+import re
 from datetime import timedelta, timezone
 from typing import Final
 
@@ -20,7 +21,7 @@ HOST_MIN_INTERVAL_S: Final[dict[str, float]] = {
 }
 
 # Bump when a fetcher's parsing / selection changes so stale cached results are not reused.
-CACHE_VERSION: Final = 3
+CACHE_VERSION: Final = 4
 
 # ---- cache TTLs (CLAUDE.md: live <= 15 min, static geography <= 7 days)
 LIVE_TTL_S: Final = 15 * 60
@@ -43,8 +44,12 @@ OVERPASS_MIRRORS: Final = (
 OVERPASS_SERVER_TIMEOUT_S: Final = 25  # [timeout:N] ceiling from CLAUDE.md
 VENUE_ATTEMPT_TIMEOUT_S: Final = 12.0
 VENUE_DEADLINE_S: Final = 25.0
-CONTEXT_ATTEMPT_TIMEOUT_S: Final = 10.0
-CONTEXT_DEADLINE_S: Final = 14.0  # then degrade: exposure E = 0, lower confidence
+# The context query is the biggest threat to pillar 1 (no context -> E = 0 -> venues stop
+# differing). Measured Oct 2026: overpass.openstreetmap.fr answers a 12-venue Mumbai query in
+# ~8 s while the other mirrors time out at 40 s. So: 12 s on the last-good mirror, then one
+# retry on a different mirror inside a 20 s total, then degrade.
+CONTEXT_ATTEMPT_TIMEOUT_S: Final = 12.0
+CONTEXT_DEADLINE_S: Final = 20.0
 CONTEXT_RADIUS_M: Final = 2000  # roads / industry / power (exposure sources)
 MICROCLIMATE_RADIUS_M: Final = 500  # green / water share window
 
@@ -54,6 +59,9 @@ AIR_QUALITY_URL: Final = "https://air-quality-api.open-meteo.com/v1/air-quality"
 FORECAST_DAYS: Final = 7
 PAST_DAYS: Final = 2  # ground-condition rule needs 48 h of past rain
 AQ_FORECAST_DAYS: Final = 5  # CAMS Global horizon
+# The station bias compares a reading with CAMS at the observation hour, which can be up to
+# STATION_MAX_AGE_H in the past (yesterday, shortly after midnight).
+AQ_PAST_DAYS: Final = 1
 TIMEZONE: Final = "Asia/Kolkata"
 FORECAST_HOURLY: Final = (
     "temperature_2m", "relative_humidity_2m", "dew_point_2m", "apparent_temperature",
@@ -76,6 +84,16 @@ MAX_STATION_FEEDS: Final = 8  # cap on per-station requests per query
 # from the observation time (weights.STATION_BIAS_DECAY_H), so an older reading counts less.
 STATION_MAX_AGE_H: Final = 6.0
 STATION_TIMEOUT_S: Final = 8.0
+MAX_STALE_REPORTED: Final = 3  # nearest stale regulatory stations named in the assumptions
+# Regulatory / reference-grade monitors, matched against provider, owner and station name:
+# CPCB and state boards (MPCB, DPCC, KSPCB, ... "Pollution Control"), IITM / SAFAR, municipal
+# CAAQMS (BMC, NMMC), and US Embassy / Consulate monitors (AirNow, BAM reference monitors).
+# OpenAQ's isMonitor flag also counts. Anything else is treated as a low-cost sensor.
+REGULATORY_PATTERN: Final = re.compile(
+    r"\b(CPCB|[A-Z]{1,3}PCB|DPCC|IITM|SAFAR|AirNow|caaqm|BMC|NMMC)\b|Pollution Control"
+    r"|Tropical Meteorology|U\.?S\.? (Embassy|Consulate)|Municipal Corporation",
+    re.IGNORECASE,
+)
 
 # US EPA PM2.5 AQI breakpoints (pre-2024 table, which WAQI documents at aqicn.org/faq):
 # (conc_lo, conc_hi, aqi_lo, aqi_hi). WAQI publishes sub-indices, not ug/m3, so we invert.
