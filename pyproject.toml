@@ -1,0 +1,23 @@
+[project]
+name = "bahar"
+version = "0.1.0"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "astral>=3.2",
+    "diskcache>=5.6.3",
+    "fastapi>=0.159.1",
+    "httpx>=0.28.1",
+    "huggingface-hub>=2.2.0",
+    "jinja2>=3.1.6",
+    "llama-cpp-python",
+    "pydantic>=2",
+    "pydantic-settings>=2.16.1",
+    "pyproj>=3.7.2",
+    "shapely>=2.2.0",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[tool.uv.sources]
+# Prebuilt glibc CPU wheel from the upstream GitHub release (PyPI only has an sdist; the
+# abetlen wheel index ships musl builds that cannot load on Debian).
+llama-cpp-python = { url = "https://github.com/abetlen/llama-cpp-python/releases/download/v0.3.36/llama_cpp_python-0.3.36-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl" }
