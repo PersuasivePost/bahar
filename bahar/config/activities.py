@@ -224,6 +224,11 @@ _SYNONYM_PATTERNS: Final = {
 }
 
 
+def mentioned_activities(text: str) -> set[Activity]:
+    """Every activity with a synonym in the text."""
+    return {a for a, pattern in _SYNONYM_PATTERNS.items() if pattern.search(text)}
+
+
 def normalize_activity(text: str) -> Activity | None:
     """Map free text (parser `activity_raw`) to an activity: the one whose longest synonym
     match is longest; None when nothing matches."""
@@ -234,6 +239,9 @@ def normalize_activity(text: str) -> Activity | None:
             best = (len(m.group()), activity)
     return best[1] if best else None
 
+
+# Activities that can be an A -> B commute (CLAUDE.md: cycling commute; walking / running too).
+COMMUTE_ACTIVITIES: Final = frozenset({Activity.cycling, Activity.walking, Activity.running})
 
 # ---------------------------------------------------------------- candidate selection
 

@@ -96,7 +96,7 @@ def _score(ctx: ScoringContext, states: dict[str, VenueState], starts: Sequence[
 def run_engine(inp: EngineInput) -> EngineResult:
     act = ACTIVITIES[inp.activity]
     health, assumptions = resolve_health(inp.parsed.profile)
-    assumptions = [*inp.window.assumptions, *assumptions]
+    assumptions = [*inp.place.assumptions, *inp.window.assumptions, *assumptions]
     now = inp.now.astimezone(IST)
     starts = inp.window.starts
     if not starts:

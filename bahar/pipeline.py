@@ -1,5 +1,5 @@
-"""Orchestration: fetch everything the engine needs for a parsed query, in parallel where the
-data allows, with per-stage latency. (The LLM stages are wired in Step 7.)"""
+"""Orchestration: gate a parsed query, then fetch everything the engine needs, in parallel
+where the data allows, with per-stage latency. (The composer is wired in Step 7.)"""
 
 import asyncio
 import time
@@ -18,7 +18,15 @@ from bahar.data.stations import fetch_stations
 from bahar.data.weather import fetch_forecast
 from bahar.engine.sun import sun_days
 from bahar.engine.timewindow import resolve_window
-from bahar.models import Activity, DegradedSource, EngineInput, ParsedQuery
+from bahar.llm import templates
+from bahar.models import (
+    Activity,
+    DegradedSource,
+    EngineInput,
+    Gate,
+    ParsedQuery,
+    Status,
+)
 
 GatherStatus = Literal["ok", "out_of_scope", "needs_clarification", "no_venues", "no_forecast"]
 
@@ -37,16 +45,40 @@ def _activity(parsed: ParsedQuery) -> Activity | None:
     return normalize_activity(parsed.activity_raw) if parsed.activity_raw else None
 
 
+def gate(parsed: ParsedQuery) -> Gate | None:
+    """Stop before fetching: unsupported activity -> out_of_scope; an unrecognised activity, a
+    missing location or commute end -> needs_clarification with exactly one question (in that
+    order). A missing time is not a gate: the time resolver defaults it and records it."""
+    lang = parsed.lang
+    if not parsed.in_scope:
+        return Gate(status=Status.out_of_scope, reason="unsupported activity",
+                    message=templates.out_of_scope(lang))  # fmt: skip
+    if _activity(parsed) is None:
+        return Gate(status=Status.needs_clarification, reason="activity not recognised",
+                    message=templates.ask_activity(lang))  # fmt: skip
+    if parsed.commute is not None:
+        if parsed.commute.from_ is None:
+            return Gate(status=Status.needs_clarification, reason="commute start missing",
+                        message=templates.ASK_COMMUTE_FROM[lang])  # fmt: skip
+        if parsed.commute.to is None:
+            return Gate(status=Status.needs_clarification, reason="commute end missing",
+                        message=templates.ASK_COMMUTE_TO[lang])  # fmt: skip
+    elif not parsed.location_text:
+        return Gate(status=Status.needs_clarification, reason="location missing",
+                    message=templates.ASK_LOCATION[lang])  # fmt: skip
+    return None
+
+
 async def gather_inputs(parsed: ParsedQuery, now: datetime) -> Gathered:
-    """geocode -> venues -> (context | forecast | air quality | stations | routing)."""
+    """gate -> geocode -> venues -> (context | forecast | air quality | stations | routing)."""
     latency: dict[str, int] = {}
     degraded: list[DegradedSource] = []
+    if (stop := gate(parsed)) is not None:
+        return Gathered(status=stop.status.value, detail=stop.message)
     activity = _activity(parsed)
-    if not parsed.in_scope or activity is None:
-        return Gathered(status="out_of_scope", detail="no supported activity")
-    location = parsed.location_text or (parsed.commute.from_ if parsed.commute else None)
-    if not location:
-        return Gathered(status="needs_clarification", detail="location missing")
+    assert activity is not None  # gate() checked
+    location = parsed.commute.from_ if parsed.commute else parsed.location_text
+    assert location is not None  # gate() checked
 
     t0 = time.perf_counter()
     g = await geocode(location)

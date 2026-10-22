@@ -9,6 +9,7 @@ import asyncio
 import logging
 import os
 import time
+from functools import lru_cache
 from pathlib import Path
 
 from huggingface_hub import hf_hub_download
@@ -26,6 +27,12 @@ _WARMUP_PROMPT = (
     + "<|im_end|>\n<|im_start|>assistant\n"
 )
 _WARMUP_GEN_TOKENS = 48
+
+
+@lru_cache(maxsize=8)
+def _grammar(text: str) -> LlamaGrammar:
+    """Grammars are static per prompt kind; parse each GBNF text once."""
+    return LlamaGrammar.from_string(text, verbose=False)
 
 
 def available_threads() -> int:
@@ -111,6 +118,9 @@ class LlmRuntime:
             raise RuntimeError("model not loaded")
         return self._llm
 
+    def has_prefix(self, name: str) -> bool:
+        return name in self._prefix_state
+
     def register_prefix(self, name: str, text: str) -> int:
         """Evaluate a static prompt prefix once and keep its KV state. Returns token count."""
         llm = self._require()
@@ -134,7 +144,7 @@ class LlmRuntime:
             max_tokens=max_tokens,
             temperature=0.0,
             stop=["<|im_end|>"],
-            grammar=LlamaGrammar.from_string(grammar) if grammar else None,
+            grammar=_grammar(grammar) if grammar else None,
         )
         return out["choices"][0]["text"]
 

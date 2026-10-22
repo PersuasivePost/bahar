@@ -128,8 +128,9 @@ class Profile(BaseModel):
 class Commute(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    from_: str = Field(alias="from")
-    to: str
+    # Either end may be missing in a parse; the pipeline gate asks for it (needs_clarification).
+    from_: str | None = Field(default=None, alias="from")
+    to: str | None = None
 
 
 class ParsedQuery(BaseModel):
@@ -143,6 +144,22 @@ class ParsedQuery(BaseModel):
     preferences: list[str] = []
     commute: Commute | None = None
     lang: Lang
+
+
+class ParseResult(BaseModel):
+    parsed: ParsedQuery
+    raw: str  # model output before normalisation ("" when the model was not used)
+    assumptions: list[str] = []
+    ms: int
+    fallback: bool = False  # rule-based parse because the model was unavailable or failed
+
+
+class Gate(BaseModel):
+    """A query stopped before any data is fetched, with the one message to show."""
+
+    status: Status
+    reason: str
+    message: str
 
 
 class TimeWindow(BaseModel):
@@ -206,6 +223,7 @@ class Place(BaseModel):
     bbox: tuple[float, float, float, float]  # south, west, north, east
     place_rank: int
     is_city: bool
+    assumptions: list[str] = []  # e.g. a close runner-up result in another place
 
 
 # One geometry = a polyline or ring as (lat, lon) pairs.

@@ -187,8 +187,12 @@ def local_air_quality(
 def air_quality_assumptions(
     stations: StationSet | None, biases: Sequence[StationBias | None], now: datetime
 ) -> list[str]:
-    notes = ["Local PM2.5/PM10 are modelled estimates (CAMS + stations + nearby sources), "
-             "not measurements; NAQI categories on hourly values are indicative."]  # fmt: skip
+    notes = [
+        (
+            "Local PM2.5/PM10 are modelled estimates (CAMS + stations + nearby sources), "
+            "not measurements; NAQI categories on hourly values are indicative."
+        )
+    ]
     if any(b is not None for b in biases):
         notes.append("PM10 uses the PM2.5 ground-station correction factor.")
         if any(b is not None and b.low_cost for b in biases):

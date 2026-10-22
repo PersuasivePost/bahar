@@ -11,6 +11,7 @@ from fastapi import FastAPI, Request, Response
 
 from bahar import __version__
 from bahar.config.settings import get_settings
+from bahar.llm.parser import register_parser
 from bahar.llm.runtime import LlmRuntime
 from bahar.models import AskRequest, AskResponse, Grounding, Health, Status
 
@@ -54,6 +55,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     runtime = LlmRuntime(get_settings())
     app.state.llm = runtime
     await asyncio.to_thread(runtime.load)
+    if runtime.health.model_loaded:
+        t0 = time.perf_counter()
+        n = await asyncio.to_thread(register_parser, runtime)
+        log.info("parser prefix: %d tokens in %d ms", n, (time.perf_counter() - t0) * 1000)
     log.info("startup complete: %s", runtime.health.model_dump_json())
     yield
 

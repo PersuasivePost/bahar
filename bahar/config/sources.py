@@ -21,7 +21,7 @@ HOST_MIN_INTERVAL_S: Final[dict[str, float]] = {
 }
 
 # Bump when a fetcher's parsing / selection changes so stale cached results are not reused.
-CACHE_VERSION: Final = 5
+CACHE_VERSION: Final = 7
 
 # ---- cache TTLs (CLAUDE.md: live <= 15 min, static geography <= 7 days)
 LIVE_TTL_S: Final = 15 * 60
@@ -31,6 +31,24 @@ STATIC_TTL_S: Final = 7 * 24 * 3600
 NOMINATIM_URL: Final = "https://nominatim.openstreetmap.org/search"
 # Nominatim place_rank: 16 = city / town boundary, >= 17 = suburb, neighbourhood, POI.
 CITY_MAX_PLACE_RANK: Final = 16
+GEOCODE_CANDIDATES: Final = 10
+# Results are ranked by Nominatim `importance` (Wikipedia-link based prominence), then by
+# address type: a bare "Andheri" must pick the Mumbai suburb, not a Punjab village.
+GEOCODE_PREFERRED_TYPES: Final = frozenset({
+    "suburb", "neighbourhood", "quarter", "city_district", "borough", "city", "town",
+})  # fmt: skip
+GEOCODE_MINOR_TYPES: Final = frozenset({"village", "hamlet", "isolated_dwelling", "farm"})
+# Runner-up worth mentioning: importance within this margin and a different place (> 5 km).
+GEOCODE_CLOSE_IMPORTANCE: Final = 0.05
+GEOCODE_DISTINCT_KM: Final = 5.0
+# Romanised Indian place names vary in vowels (Hinjewadi / Hinjawadi). When the top result's
+# name matches the query's place word below GEOCODE_NAME_MATCH (difflib ratio), retry with
+# single-substitution vowel variants, at most GEOCODE_MAX_VARIANTS requests (1 req/s each).
+GEOCODE_NAME_MATCH: Final = 0.8
+GEOCODE_MAX_VARIANTS: Final = 3
+GEOCODE_VOWEL_SWAPS: Final = (
+    ("e", "a"), ("a", "e"), ("ee", "i"), ("i", "ee"), ("oo", "u"), ("u", "oo"),
+)  # fmt: skip
 CITY_MIN_RADIUS_KM: Final = 12.0
 MAX_RADIUS_KM: Final = 50.0
 

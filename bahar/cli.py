@@ -1,8 +1,11 @@
-"""Run fetch + engine for a ParsedQuery, without the LLM, and pretty-print the recommendation.
+"""Run parse -> gate -> fetch + engine (no composer yet) and pretty-print the recommendation.
 
+    uv run python -m bahar.cli --q "kal shaam Koregaon Park mein daudna hai"
     uv run python -m bahar.cli --parsed '{"in_scope": true, "activity": "running",
         "location_text": "Koregaon Park, Pune", "time": {"day": "tomorrow", "part": "evening"},
         "lang": "en"}'
+
+--parsed skips the language model entirely.
 """
 
 import argparse
@@ -13,13 +16,16 @@ from datetime import datetime
 
 from bahar.config.activities import ACTIVITIES
 from bahar.config.health import resolve_health
+from bahar.config.settings import get_settings
 from bahar.config.sources import IST
 from bahar.config.weights import IMPROVE_SEARCH_H
 from bahar.data.http import close_client
 from bahar.engine.recommend import rank
 from bahar.engine.run import run_engine
+from bahar.llm.parser import parse_query, register_parser
+from bahar.llm.runtime import LlmRuntime
 from bahar.models import EngineInput, EngineResult, Factor, ParsedQuery, ScoredSlot
-from bahar.pipeline import gather_inputs
+from bahar.pipeline import gate, gather_inputs
 
 _W = 92
 
@@ -160,16 +166,47 @@ async def _main(parsed: ParsedQuery, now: datetime) -> None:
         await close_client()
 
 
+def _parse(query: str, now: datetime) -> ParsedQuery | None:
+    """Load the model, register the parser prefix, parse; print the parse and the gate.
+    Returns the ParsedQuery when it passes the gate."""
+    runtime = LlmRuntime(get_settings())
+    runtime.load()
+    h = runtime.health
+    if h.model_loaded:
+        t0 = time.perf_counter()
+        n = register_parser(runtime)
+        print(f"model      {h.model_file} · {h.n_threads} threads · parser prefix {n} tokens "
+              f"in {int((time.perf_counter() - t0) * 1000)} ms")  # fmt: skip
+    else:
+        print(f"model      NOT LOADED ({h.error}) — rule-based fallback")
+    res = asyncio.run(parse_query(runtime, query, now))
+    _rule(f"PARSED · {res.ms} ms{' · FALLBACK' if res.fallback else ''}")
+    print(f"raw        {res.raw or '—'}")
+    print(res.parsed.model_dump_json(by_alias=True, exclude_defaults=True, indent=2))
+    for a in res.assumptions:
+        print(f"  - {a}")
+    stop = gate(res.parsed)
+    _rule(f"GATE · {stop.status.value if stop else 'pass'}")
+    if stop:
+        print(f"{stop.reason}: {stop.message}")
+        return None
+    return res.parsed
+
+
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Bahar fetch + engine, no LLM")
-    ap.add_argument("--parsed", required=True, help="ParsedQuery JSON")
+    ap = argparse.ArgumentParser(description="Bahar parse + fetch + engine (no composer)")
+    src = ap.add_mutually_exclusive_group(required=True)
+    src.add_argument("--q", help="free-text question (runs the SLM parser)")
+    src.add_argument("--parsed", help="ParsedQuery JSON (skips the parser)")
     ap.add_argument("--now", help="ISO datetime (IST if naive); default: the current time")
     args = ap.parse_args()
-    parsed = ParsedQuery.model_validate_json(args.parsed)
     now = datetime.fromisoformat(args.now) if args.now else datetime.now(IST)
     if now.tzinfo is None:
         now = now.replace(tzinfo=IST)
-    asyncio.run(_main(parsed, now))
+    parsed = _parse(args.q, now) if args.q else ParsedQuery.model_validate_json(args.parsed)
+    if parsed is not None:
+        _rule("RECOMMENDATION")
+        asyncio.run(_main(parsed, now))
 
 
 if __name__ == "__main__":

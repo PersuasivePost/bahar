@@ -18,6 +18,9 @@ dependencies = [
     "uvicorn[standard]>=0.54.0",
 ]
 
+[tool.ruff]
+line-length = 100
+
 [tool.uv.sources]
 # Prebuilt glibc CPU wheel from the upstream GitHub release (PyPI only has an sdist; the
 # abetlen wheel index ships musl builds that cannot load on Debian).

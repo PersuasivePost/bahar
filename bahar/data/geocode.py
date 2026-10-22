@@ -1,12 +1,16 @@
 """Nominatim geocoding, India-biased, 1 req/s (enforced in data.http)."""
 
+import re
 from datetime import UTC, datetime
+from difflib import SequenceMatcher
+from typing import Any
 
 from bahar.config import sources as cfg
 from bahar.data import cache
 from bahar.data.http import degraded, request_json
 from bahar.data.result import Fetch
-from bahar.models import Evidence, Place, SourceKey
+from bahar.engine.geo import haversine_km
+from bahar.models import DegradedSource, Evidence, Place, SourceKey
 
 IMPACT = "cannot locate the place; query needs clarification"
 
@@ -24,22 +28,37 @@ async def geocode(text: str) -> Fetch[Place]:
     return await cache.cached(key, cache.STATIC, lambda: _fetch(text))
 
 
-async def _fetch(text: str) -> Fetch[Place]:
+async def _search(text: str) -> tuple[list[dict[str, Any]], DegradedSource | None]:
     data, failure = await request_json(
         SourceKey.nominatim, "geocode", IMPACT, "GET", cfg.NOMINATIM_URL,
-        params={"q": text, "format": "jsonv2", "countrycodes": "in", "limit": 5},
+        params={"q": text, "format": "jsonv2", "countrycodes": "in",
+                "limit": cfg.GEOCODE_CANDIDATES},
     )  # fmt: skip
+    return sorted(data or [], key=_rank, reverse=True), failure
+
+
+async def _fetch(text: str) -> Fetch[Place]:
+    ranked, failure = await _search(text)
     if failure:
         return Fetch(degraded=[failure])
-    if not data:
+    token = text.split(",")[0].strip()
+    notes: list[str] = []
+    if not ranked or _name_match(token, ranked[0]) < cfg.GEOCODE_NAME_MATCH:
+        for variant in _vowel_variants(token)[: cfg.GEOCODE_MAX_VARIANTS]:
+            alt, alt_failure = await _search(text.replace(token, variant, 1))
+            if alt_failure or not alt:
+                continue
+            if not ranked or _name_match(token, alt[0]) > _name_match(token, ranked[0]):
+                ranked, notes = alt, [f"searched '{token}' as '{variant}' (spelling variant)"]
+            if _name_match(token, ranked[0]) >= cfg.GEOCODE_NAME_MATCH:
+                break
+    if not ranked:
         empty = degraded(
             SourceKey.nominatim, "geocode", "empty", f"no match for {text!r} in India", IMPACT
         )
         return Fetch(degraded=[empty])
 
-    # The top hit for a bare town name can be a station or road; prefer an administrative or
-    # place result so the city / neighbourhood rank is meaningful.
-    hit = next((h for h in data if h.get("category") in ("boundary", "place")), data[0])
+    hit = ranked[0]
     south, north, west, east = (float(v) for v in hit["boundingbox"])  # Nominatim order
     rank = int(hit.get("place_rank", 30))
     place = Place(
@@ -50,6 +69,7 @@ async def _fetch(text: str) -> Fetch[Place]:
         bbox=(south, west, north, east),
         place_rank=rank,
         is_city=rank <= cfg.CITY_MAX_PLACE_RANK,
+        assumptions=[*notes, *_runner_up_note(hit, ranked[1:])],
     )
     evidence = Evidence(
         id="raw:nominatim:place",
@@ -59,3 +79,55 @@ async def _fetch(text: str) -> Fetch[Place]:
         fetched_at=datetime.now(UTC),
     )
     return Fetch(value=place, evidence=[evidence])
+
+
+def _name_match(token: str, hit: dict[str, Any]) -> float:
+    """1.0 when the query's place word is inside the result name ("Whitefield (Kadugodi)"),
+    else their difflib ratio."""
+    name = (hit.get("name") or hit["display_name"].split(", ")[0]).casefold()
+    token = token.casefold()
+    return 1.0 if token in name else SequenceMatcher(None, token, name).ratio()
+
+
+def _vowel_variants(token: str) -> list[str]:
+    """Each single vowel substitution, in GEOCODE_VOWEL_SWAPS order, left to right."""
+    lower = token.lower()
+    out: list[str] = []
+    for old, new in cfg.GEOCODE_VOWEL_SWAPS:
+        for m in re.finditer(re.escape(old), lower):
+            variant = token[: m.start()] + new + token[m.end() :]
+            if variant.lower() != lower and variant not in out:
+                out.append(variant)
+    return out
+
+
+def _rank(hit: dict[str, Any]) -> tuple[float, int]:
+    """Nominatim importance first (2 decimals), then address type: suburb / city above
+    village / hamlet, everything else (stations, landuse, roads) in between."""
+    kind = hit.get("addresstype") or hit.get("type")
+    tier = 1
+    if kind in cfg.GEOCODE_PREFERRED_TYPES:
+        tier = 2
+    elif kind in cfg.GEOCODE_MINOR_TYPES:
+        tier = 0
+    return round(float(hit.get("importance") or 0.0), 2), tier
+
+
+def _runner_up_note(hit: dict[str, Any], rest: list[dict[str, Any]]) -> list[str]:
+    """Name the best other result when it is almost as prominent and somewhere else."""
+    lat, lon = float(hit["lat"]), float(hit["lon"])
+    for other in rest:
+        km = haversine_km(lat, lon, float(other["lat"]), float(other["lon"]))
+        if km < cfg.GEOCODE_DISTINCT_KM:
+            continue  # the same place mapped twice (landuse + locality)
+        gap = float(hit.get("importance") or 0.0) - float(other.get("importance") or 0.0)
+        if gap <= cfg.GEOCODE_CLOSE_IMPORTANCE:
+            return [f"location read as {_short(hit)}; also possible: {_short(other)}"]
+        return []
+    return []
+
+
+def _short(hit: dict[str, Any]) -> str:
+    """Name, district, state: "Andheri, Sangrur, Punjab"."""
+    parts = [p for p in hit["display_name"].split(", ") if not p.isdigit() and p != "India"]
+    return ", ".join([parts[0], *parts[1:][-2:]])
