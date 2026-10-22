@@ -1,6 +1,6 @@
 """All pydantic models at module boundaries (docs/plan.md §2)."""
 
-from datetime import datetime
+from datetime import date, datetime
 from enum import StrEnum
 from typing import Literal
 
@@ -154,6 +154,7 @@ class Venue(BaseModel):
     lat: float
     lon: float
     area_km2: float | None = None
+    bbox: tuple[float, float, float, float] | None = None  # south, west, north, east
     distance_km: float
     tags: dict[str, str] = {}
     opening_hours: str | None = None
@@ -178,6 +179,112 @@ class VenueContext(BaseModel):
     near_water: bool = False
     travel_min: float | None = None
     travel_estimated: bool = False
+
+
+class Place(BaseModel):
+    """A geocoded location (Nominatim)."""
+
+    query: str
+    name: str  # Nominatim display_name
+    lat: float
+    lon: float
+    bbox: tuple[float, float, float, float]  # south, west, north, east
+    place_rank: int
+    is_city: bool
+
+
+# One geometry = a polyline or ring as (lat, lon) pairs.
+LatLon = tuple[float, float]
+
+
+class ContextFeature(BaseModel):
+    """A raw OSM feature near the candidates; the engine groups and weighs them later."""
+
+    osm_id: str  # "way/123"
+    group: Literal["road", "industry", "power", "green", "water"]
+    cls: str  # motorway | trunk | primary | secondary | industrial | landfill | construction |
+    #           quarry | power_plant | green | water | coastline | river
+    name: str | None = None
+    ref: str | None = None
+    closed: bool  # True = polygon ring(s), False = polyline
+    rings: list[list[LatLon]]
+
+
+class WeatherHour(BaseModel):
+    t: datetime  # IST
+    temp_c: float | None = None
+    rh: float | None = None
+    dew_c: float | None = None
+    apparent_c: float | None = None
+    wet_bulb_c: float | None = None
+    rain_prob: float | None = None  # null for past hours
+    rain_mm: float | None = None
+    weather_code: int | None = None
+    cloud: float | None = None
+    wind_kmh: float | None = None
+    wind_dir_deg: float | None = None
+    gust_kmh: float | None = None
+    uv: float | None = None
+    swr: float | None = None
+    direct_rad: float | None = None
+    cape: float | None = None
+    is_day: bool | None = None
+
+
+class VenueWeather(BaseModel):
+    venue_id: str
+    lat: float  # grid point actually used by Open-Meteo
+    lon: float
+    elevation_m: float | None = None
+    hours: list[WeatherHour]
+    sunrise: dict[date, datetime] = {}
+    sunset: dict[date, datetime] = {}
+
+
+class AirQualityHour(BaseModel):
+    t: datetime  # IST
+    pm25: float | None = None  # null beyond the CAMS horizon
+    pm10: float | None = None
+    no2: float | None = None
+    o3: float | None = None
+
+
+class VenueAirQuality(BaseModel):
+    venue_id: str
+    hours: list[AirQualityHour]
+
+
+class StationReading(BaseModel):
+    uid: str
+    name: str
+    lat: float
+    lon: float
+    pm25_ugm3: float
+    aqi_pm25: int | None = None  # WAQI sub-index the value was inverted from
+    observed_at: datetime
+    source: Literal["waqi", "openaq"]
+    attribution: str | None = None  # station originator
+
+
+class TravelTime(BaseModel):
+    venue_id: str
+    minutes: float  # free-flow; the traffic multiplier is applied by the engine
+    estimated: bool  # True = haversine fallback, not routed
+
+
+class Forecast(BaseModel):
+    fetched_at: datetime
+    venues: dict[str, VenueWeather]
+
+
+class AirQualityForecast(BaseModel):
+    fetched_at: datetime
+    venues: dict[str, VenueAirQuality]
+
+
+class ContextData(BaseModel):
+    fetched_at: datetime
+    features: list[ContextFeature]
 
 
 # ---------------------------------------------------------------- engine output
