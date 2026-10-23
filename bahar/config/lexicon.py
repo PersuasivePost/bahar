@@ -183,6 +183,19 @@ UNSUPPORTED_ACTIVITY: Final = re.compile(
     _I,
 )
 
+# ---- bare place names (parser.recover_place): Latin words that are never part of a place name
+# when the model found no location. Activities, days, parts of day, sun events and health /
+# company words are excluded by their own lexicons; these are the remaining function words.
+PLACE_STOP_WORDS: Final = frozenset({
+    "a", "an", "the", "i", "my", "me", "we", "our", "us", "you", "to", "for", "of", "and", "or",
+    "with", "in", "at", "on", "near", "nearby", "around", "by", "from", "into", "after",
+    "before", "is", "are", "am", "can", "could", "should", "would", "will", "want", "need",
+    "go", "going", "do", "does", "have", "has", "best", "good", "better", "nice", "safe",
+    "where", "when", "what", "which", "how", "any", "some", "there", "here", "this", "that",
+    "please", "plan", "place", "spot", "time", "today", "tomorrow", "morning", "evening",
+    "night", "afternoon", "weekend", "photos", "photo", "pics", "shots", "ok", "okay",
+})  # fmt: skip
+
 # ---- cities: a city named anywhere in the query is added to the geocoder search string
 # ("Andheri ... Mumbai" -> "Andheri, Mumbai"). Alias -> canonical name; longest alias first.
 CITIES: Final[dict[str, str]] = {

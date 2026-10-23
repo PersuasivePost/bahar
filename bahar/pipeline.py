@@ -27,7 +27,7 @@ from bahar.engine.sun import sun_days
 from bahar.engine.timewindow import resolve_window
 from bahar.llm import templates
 from bahar.llm.composer import available, compose, facts_refs, mode_for, section_refs, summary_lines
-from bahar.llm.parser import detect_lang, parse_query, rule_based_parse
+from bahar.llm.parser import detect_lang, parse_query, recover_place, rule_based_parse
 from bahar.llm.runtime import LlmRuntime
 from bahar.llm.validator import line_section, misplaced, validate
 from bahar.models import (
@@ -238,15 +238,16 @@ async def _ask(runtime: LlmRuntime, req: _Request) -> AskResponse:
         pr = await asyncio.wait_for(parse_query(runtime, req.query, req.now), budget.PARSE_TIMEOUT_S)
     except TimeoutError:
         pr = rule_based_parse(req.query, req.now, "parser timed out")
+    parsed, recovered = await recover_place(pr.parsed, req.query)
     req.latency["parse"] = _ms(t)
-    req.parsed, req.lang = pr.parsed, pr.parsed.lang
-    req.assumptions += pr.assumptions
-    if (stop := gate(pr.parsed)) is not None:
+    req.parsed, req.lang = parsed, parsed.lang
+    req.assumptions += [*pr.assumptions, *recovered]
+    if (stop := gate(parsed)) is not None:
         return req.respond(stop.status, stop.message)
 
     t = time.perf_counter()
     try:
-        g = await asyncio.wait_for(gather_inputs(pr.parsed, req.now), budget.GATHER_TIMEOUT_S)
+        g = await asyncio.wait_for(gather_inputs(parsed, req.now), budget.GATHER_TIMEOUT_S)
     except TimeoutError:
         req.latency["gather"] = _ms(t)
         req.degraded.append(DegradedSource(source=SourceKey.engine, stage="gather", reason="timeout",
@@ -255,7 +256,7 @@ async def _ask(runtime: LlmRuntime, req: _Request) -> AskResponse:
         return req.respond(Status.error, templates.INTERNAL_ERROR[req.lang])
     req.latency.update(g.latency_ms)
     req.degraded += g.degraded
-    activity = _activity(pr.parsed)
+    activity = _activity(parsed)
     if g.status == "needs_clarification":
         return req.respond(Status.needs_clarification, templates.PLACE_NOT_FOUND[req.lang])
     if g.status == "no_venues":

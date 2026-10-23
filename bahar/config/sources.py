@@ -52,6 +52,8 @@ GEOCODE_VOWEL_SWAPS: Final = (
 # A Devanagari geocode is accepted only when its name agrees with the parser's Latin spelling
 # at least this much (difflib ratio, or containment): a truncated copy can match elsewhere.
 GEOCODE_NATIVE_AGREE: Final = 0.6
+# A place the model missed (parser.recover_place): geocode at most this many candidate words.
+PLACE_RECOVERY_TRIES: Final = 3
 CITY_MIN_RADIUS_KM: Final = 12.0
 MAX_RADIUS_KM: Final = 50.0
 

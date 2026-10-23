@@ -24,7 +24,8 @@ from bahar.config.activities import (
     mentioned_activities,
     normalize_activity,
 )
-from bahar.config.sources import IST, MAX_RADIUS_KM
+from bahar.config.sources import IST, MAX_RADIUS_KM, PLACE_RECOVERY_TRIES
+from bahar.data.geocode import agrees, geocode
 from bahar.llm.prompts import PARSER_PREFIX, PARSER_PREFIX_NAME, parser_suffix
 from bahar.llm.runtime import LlmRuntime
 from bahar.models import Activity, Condition, Lang, ParsedQuery, ParseResult, Part
@@ -183,6 +184,50 @@ def normalize(data: dict[str, Any], query: str, today: date) -> tuple[ParsedQuer
     out["preferences"] = list(dict.fromkeys(prefs))[:MAX_PREFERENCES]
     out["lang"] = detect_lang(query).value
     return ParsedQuery.model_validate(out), assumptions
+
+
+async def recover_place(parsed: ParsedQuery, query: str) -> tuple[ParsedQuery, list[str]]:
+    """A bare place name ("kal subah Powai walk asthma") leaves the model's location empty.
+    Try the query's words that no lexicon claims (adjacent pairs first, capitalised first) with
+    the geocoder; accept a result in India whose name agrees with the candidate."""
+    if not parsed.in_scope or parsed.location_text or parsed.commute or lx.DEVANAGARI.search(query):
+        return parsed, []
+    for cand in _place_candidates(query)[:PLACE_RECOVERY_TRIES]:
+        place = (await geocode(_with_city(cand, query))).value
+        if place is not None and place.name.endswith("India") and agrees(place, cand):
+            return (
+                parsed.model_copy(update={"location_text": _with_city(cand, query)}),
+                [f"read '{cand}' as the place"],
+            )
+    return parsed, []
+
+
+def _place_candidates(query: str) -> list[str]:
+    """Runs of 1-2 adjacent words that are not activity, time, health or function words."""
+    words = re.findall(r"[^\W\d_]+", query)
+    free = [not _claimed(w) for w in words]
+    cands: list[tuple[int, int, str]] = []
+    for i, w in enumerate(words):
+        if free[i]:
+            if w.lower() not in lx.GENERIC_PLACE_WORDS:  # "Park" alone is not a place name
+                cands.append((int(w[0].isupper()), 1, w))
+            if i + 1 < len(words) and free[i + 1]:
+                two = f"{w} {words[i + 1]}"
+                cands.append((int(w[0].isupper()) + int(words[i + 1][0].isupper()), 2, two))
+    cands.sort(key=lambda c: (-c[0], -c[1]))  # stable: query order breaks ties
+    return list(dict.fromkeys(c[2] for c in cands))
+
+
+def _claimed(word: str) -> bool:
+    """Is this word an activity / time / health / function word rather than a place?"""
+    w = word.lower()
+    if len(w) < MIN_PLACE_WORD or w in lx.HINGLISH or w in lx.PLACE_STOP_WORDS:
+        return True
+    if normalize_activity(w) or _time_word(w):
+        return True
+    cues = (lx.SUNRISE, lx.SUNSET, lx.MONTH, lx.CHILD_CUE, lx.SENIOR_CUE, lx.OTHER_CONDITION_CUE,
+            *lx.CONDITION_PHRASES.values())  # fmt: skip
+    return any(c.search(w) for c in cues)
 
 
 def _location(loc: str | None, query: str, assumptions: list[str]) -> str | None:
