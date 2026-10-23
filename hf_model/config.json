@@ -1,0 +1,55 @@
+{
+  "name": "bahar-qwen2.5-1.5b",
+  "version": "0.1.0-base",
+  "base_model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "license": "apache-2.0",
+  "weights": {
+    "repo": "Qwen/Qwen2.5-1.5B-Instruct-GGUF",
+    "file": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+    "format": "gguf",
+    "quantization": "Q4_K_M",
+    "fine_tuned": false
+  },
+  "runtime": {
+    "engine": "llama-cpp-python",
+    "engine_version": "0.3.36",
+    "n_ctx": 4096,
+    "n_threads": "N_THREADS env, else CPU affinity / cgroup quota",
+    "chat_format": "chatml",
+    "stop": ["<|im_end|>"],
+    "temperature": 0.0,
+    "prefix_kv_cache": "each static prefix evaluated once at startup; KV state saved and restored per call"
+  },
+  "tasks": {
+    "parser": {
+      "prefix": "parser",
+      "prefix_tokens": 1294,
+      "max_tokens": 160,
+      "grammar": "GBNF from the ParsedQuery JSON schema (bahar/llm/parser.py PARSER_SCHEMA)",
+      "output": "ParsedQuery JSON"
+    },
+    "composer": {
+      "prefixes": {
+        "en": {"name": "composer_en", "tokens": 787, "mode": "full"},
+        "hinglish": {"name": "composer_hinglish", "tokens": 895, "mode": "full"},
+        "hi": {"name": "composer_hi", "tokens": 761, "mode": "summary"},
+        "mr": {"name": "composer_mr", "tokens": 785, "mode": "summary"}
+      },
+      "max_tokens": {"full": 200, "summary": 90, "summary_devanagari": 160},
+      "grammar": "per request: refs limited to the facts block, no digit characters in any script",
+      "output": "markdown answer; every number, time and place as {{e#}} / {{v#}}",
+      "validator": [
+        "unknown refs",
+        "digits outside refs",
+        "number word next to a unit or time word",
+        "place name outside a ref",
+        "recommended place and time present",
+        "script matches the language",
+        "time ranges cite times",
+        "each labelled line cites only its own section's facts"
+      ],
+      "on_failure": "misplaced lines replaced from the template; otherwise one retry if >= 15 s remain, else the template answer"
+    }
+  },
+  "languages": ["en", "hinglish", "hi", "mr"]
+}

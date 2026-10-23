@@ -15,7 +15,7 @@ from bahar.config.activities import ActivityProfile
 from bahar.config.health import HealthProfile
 from bahar.engine.access import OpeningHours, is_open
 from bahar.engine.aq import MODELLED
-from bahar.engine.conditions import cite
+from bahar.engine.conditions import cite, cite_time
 from bahar.engine.dose import dose_share_pct, session_dose_ug
 from bahar.engine.evidence import EvidenceStore
 from bahar.engine.sun import SunDay, overlap_min
@@ -183,7 +183,7 @@ def score_slot(ctx: ScoringContext, st: VenueState, start: datetime) -> ScoredSl
     around = [st.hours.get(start - _HOUR), *hs, st.hours.get(start + len(hs) * _HOUR)]
     thunder = next((h for h in around if h and h.weather_code in w.THUNDER_CODES), None)
     if thunder:
-        ids = [c(thunder, "weather_code")]
+        ids = [c(thunder, "weather_code"), cite_time(store, v, thunder.t, "thunderstorm", ctx.weather_at)]
         if act.key in w.THUNDER_BLOCKED:
             gates.append(Factor(code=R.thunderstorm, label=f"thunderstorm forecast around {thunder.t:%H:%M}",
                                 delta=0, gate=True, evidence_ids=ids))  # fmt: skip

@@ -81,6 +81,12 @@ async def _fetch(text: str) -> Fetch[Place]:
     return Fetch(value=place, evidence=[evidence])
 
 
+def agrees(place: Place, latin: str) -> bool:
+    """Does a result found by its Devanagari name match the parser's Latin spelling?"""
+    hit = {"display_name": place.name}
+    return _name_match(latin.split(",")[0].strip(), hit) >= cfg.GEOCODE_NATIVE_AGREE
+
+
 def _name_match(token: str, hit: dict[str, Any]) -> float:
     """1.0 when the query's place word is inside the result name ("Whitefield (Kadugodi)"),
     else their difflib ratio."""

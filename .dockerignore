@@ -3,4 +3,4 @@
 .cache
 .env
 __pycache__
-p.md
+PROMPTS.md

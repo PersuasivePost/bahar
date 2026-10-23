@@ -2,6 +2,7 @@
 rotation, and every failure converted into a DegradedSource (never raised)."""
 
 import asyncio
+import logging
 import random
 import time
 from collections import defaultdict
@@ -17,6 +18,8 @@ from bahar.config.settings import get_settings
 from bahar.models import DegradedSource, SourceKey
 
 Reason = Literal["timeout", "http", "rate_limited", "empty", "parse", "horizon"]
+
+log = logging.getLogger(__name__)
 
 _client: httpx.AsyncClient | None = None
 _host_locks: defaultdict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
@@ -122,6 +125,7 @@ async def request(
                     break
                 retry_after = resp.headers.get("Retry-After")
 
+        log.warning("%s/%s attempt %d failed: %s", source.value, stage, attempt + 1, detail)
         pause = _backoff_s(attempt, retry_after)
         if attempt + 1 < cfg.RETRIES and deadline - time.monotonic() > pause + 0.5:
             await asyncio.sleep(pause)

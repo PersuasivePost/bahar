@@ -14,7 +14,8 @@ class Settings(BaseSettings):
     cache_dir: str = ".cache"
     public_base_url: str = "http://localhost:7860"
     n_ctx: int = 4096
-    n_threads: int | None = None  # override; default = affinity/cgroup-derived
+    n_threads: int | None = None  # N_THREADS; default = affinity/cgroup-derived
+    rate_limit_per_min: int = 10  # /ask requests per client IP per minute (public tunnel URL)
 
 
 @lru_cache

@@ -1,5 +1,5 @@
-"""EvidenceStore: assigns the final ids the SLM may cite. e1..eN = values, v1..vN = venue /
-place names, v0 = the user's own geocoded location. Identical records share one id."""
+"""EvidenceStore: e1..eN = values, v1..vN = venue / place names, v0 = the user's own geocoded
+location. Identical records share one id. engine.facts renumbers the cited ones."""
 
 from collections.abc import Iterable
 from datetime import datetime
@@ -15,6 +15,21 @@ class EvidenceStore:
         self._ids: dict[_Key, str] = {}
         self._next_e = 1
         self._next_v = 1
+
+    @classmethod
+    def from_records(cls, records: Iterable[Evidence]) -> "EvidenceStore":
+        """Rebuild a store from an EngineResult's evidence, so more records can be added."""
+        store = cls()
+        for r in records:
+            prefix = "v0" if r.id == "v0" else r.id[0]
+            store._ids[(prefix, r.label, r.value, r.unit, r.source, r.note)] = r.id
+            store._records[r.id] = r
+            n = int(r.id[1:])
+            if prefix == "e":
+                store._next_e = max(store._next_e, n + 1)
+            elif prefix == "v":
+                store._next_v = max(store._next_v, n + 1)
+        return store
 
     def _put(self, prefix: str, label: str, value: float | str, unit: str | None,
              source: SourceKey, fetched_at: datetime, note: str | None) -> str:  # fmt: skip
@@ -45,6 +60,9 @@ class EvidenceStore:
     def __getitem__(self, eid: str) -> Evidence:
         return self._records[eid]
 
+    def __contains__(self, eid: object) -> bool:
+        return eid in self._records
+
     def __len__(self) -> int:
         return len(self._records)
 
@@ -53,3 +71,4 @@ class EvidenceStore:
         if ids is None:
             return list(self._records.values())
         return [self._records[i] for i in dict.fromkeys(ids)]
+

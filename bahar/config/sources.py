@@ -49,6 +49,9 @@ GEOCODE_MAX_VARIANTS: Final = 3
 GEOCODE_VOWEL_SWAPS: Final = (
     ("e", "a"), ("a", "e"), ("ee", "i"), ("i", "ee"), ("oo", "u"), ("u", "oo"),
 )  # fmt: skip
+# A Devanagari geocode is accepted only when its name agrees with the parser's Latin spelling
+# at least this much (difflib ratio, or containment): a truncated copy can match elsewhere.
+GEOCODE_NATIVE_AGREE: Final = 0.6
 CITY_MIN_RADIUS_KM: Final = 12.0
 MAX_RADIUS_KM: Final = 50.0
 
@@ -139,3 +142,20 @@ FALLBACK_SPEED_KMH: Final[dict[str, float]] = {"car": 25.0, "bike": 14.0, "foot"
 # ---- elevation
 OPENTOPODATA_URL: Final = "https://api.opentopodata.org/v1/srtm30m"
 OPENTOPODATA_MAX_POINTS: Final = 100
+
+# ---- disclosure (README "Data sources"): display names and the attribution line
+SOURCE_NAMES: Final[dict[str, str]] = {
+    "nominatim": "Nominatim geocoding (© OpenStreetMap contributors)",
+    "overpass": "OpenStreetMap via Overpass API (© OpenStreetMap contributors)",
+    "open_meteo_forecast": "Open-Meteo Forecast API (open-meteo.com)",
+    "open_meteo_air_quality": "Open-Meteo Air Quality API, CAMS (Copernicus)",
+    "waqi": "World Air Quality Index project (aqicn.org)",
+    "openaq": "OpenAQ (openaq.org)",
+    "osrm": "OSRM routing (project-osrm.org) on OpenStreetMap data",
+    "opentopodata": "OpenTopoData SRTM elevation",
+    "astral": "astral (sun position, computed locally)",
+    "engine": "Bahar model on Open-Meteo, CAMS and OpenStreetMap inputs",
+}
+ATTRIBUTION: Final = (
+    "© OpenStreetMap contributors · Weather & air quality: Open-Meteo.com, CAMS (Copernicus)"
+)

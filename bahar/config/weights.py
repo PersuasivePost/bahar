@@ -14,6 +14,8 @@ PART_START_HOURS: Final[dict[Part, frozenset[int]]] = {
     Part.afternoon: frozenset(range(12, 17)),
     Part.evening: frozenset(range(16, 20)),
     Part.night: frozenset(range(19, 23)),
+    # "after work" / "office ke baad": a typical 9-to-6 day ends 17:00-18:00 plus the commute.
+    Part.after_work: frozenset(range(17, 20)),
     Part.any: frozenset(range(24)),
 }
 DEFAULT_WINDOW_H: Final = 24  # no time given -> next 24 h

@@ -109,3 +109,8 @@ def cite(store: EvidenceStore, venue: Venue, hc: HourConditions, field: str,
         value = round(raw, 1)
     return store.value(f"{label} at {venue.name}, {hc.t:%a %H:%M}", value, unit, source,
                        fetched_at, note=note)  # fmt: skip
+
+
+def cite_time(store: EvidenceStore, venue: Venue, t: datetime, what: str, fetched_at: datetime) -> str:
+    """Evidence id for a forecast hour named in a label ("heat stress rises from 09:00")."""
+    return store.value(f"{what} at {venue.name}, {t:%a}", f"{t:%H:%M}", "IST", _FORECAST, fetched_at)

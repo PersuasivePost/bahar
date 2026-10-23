@@ -18,7 +18,13 @@ As in CLAUDE.md, plus three modules:
 - `bahar/engine/run.py` — the whole engine as one pure function `EngineInput → EngineResult`,
   so fine-tuning data can replay the real engine offline (Step 5).
 - `bahar/llm/prompts.py` — the static parser and composer prefixes (system prompt +
-  few-shots), kept separate so their KV states can be saved and restored.
+  few-shots), kept separate so their KV states can be saved and restored. Step 7: one
+  composer prefix per language (a 1.5B model copies the language of the last shot).
+- `bahar/engine/facts.py` (Step 7) — the facts builder and evidence renumbering. It cannot
+  live in `engine/evidence.py` as first planned: every engine module imports
+  `EvidenceStore` from there, and the builder imports those modules (circular import).
+- `bahar/config/budget.py` (Step 7) — request deadline, stage timeouts, composer-mode and
+  retry thresholds.
 
 ## 2. Models (`bahar/models.py`, pydantic v2)
 

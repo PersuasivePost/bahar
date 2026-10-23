@@ -11,9 +11,10 @@ import os
 import time
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal, NamedTuple
 
 from huggingface_hub import hf_hub_download
-from llama_cpp import Llama, LlamaGrammar, LlamaState
+from llama_cpp import Llama, LlamaGrammar, LlamaState, StoppingCriteriaList
 
 from bahar.config.settings import Settings
 from bahar.models import LlmHealth
@@ -27,6 +28,13 @@ _WARMUP_PROMPT = (
     + "<|im_end|>\n<|im_start|>assistant\n"
 )
 _WARMUP_GEN_TOKENS = 48
+
+
+class Completion(NamedTuple):
+    text: str
+    finish: Literal["stop", "length", "deadline"]
+    tokens: int
+    ms: int
 
 
 @lru_cache(maxsize=8)
@@ -132,27 +140,58 @@ class LlmRuntime:
         return len(tokens)
 
     def _complete_sync(
-        self, prefix: str, suffix: str, max_tokens: int, grammar: str | None
-    ) -> str:
+        self,
+        prefix: str,
+        suffix: str,
+        max_tokens: int,
+        grammar: str | None,
+        deadline: float | None,
+    ) -> Completion:
+        t0 = time.perf_counter()
         llm = self._require()
         prefix_tokens = self._prefix_tokens[prefix]
         suffix_tokens = llm.tokenize(suffix.encode(), add_bos=False, special=True)
         # Restore the prefix KV state; generate() then skips re-evaluating the shared tokens.
         llm.load_state(self._prefix_state[prefix])
+        late = (lambda _ids, _logits: time.perf_counter() > deadline) if deadline else None
         out = llm.create_completion(
             prefix_tokens + suffix_tokens,
             max_tokens=max_tokens,
             temperature=0.0,
             stop=["<|im_end|>"],
             grammar=_grammar(grammar) if grammar else None,
+            stopping_criteria=StoppingCriteriaList([late]) if late else None,
         )
-        return out["choices"][0]["text"]
+        choice = out["choices"][0]
+        finish: Literal["stop", "length", "deadline"] = (
+            "length" if choice["finish_reason"] == "length" else "stop"
+        )
+        if deadline and time.perf_counter() > deadline:
+            finish = "deadline"
+        return Completion(
+            text=choice["text"],
+            finish=finish,
+            tokens=out["usage"]["completion_tokens"],
+            ms=int((time.perf_counter() - t0) * 1000),
+        )
+
+    async def generate(
+        self,
+        prefix: str,
+        suffix: str,
+        max_tokens: int = 220,
+        grammar: str | None = None,
+        deadline: float | None = None,
+    ) -> Completion:
+        """Generate after the registered static prefix `prefix`, appending `suffix`. Stops at
+        `deadline` (time.perf_counter() value) if given, including time spent waiting for the
+        lock."""
+        async with self._lock:
+            return await asyncio.to_thread(
+                self._complete_sync, prefix, suffix, max_tokens, grammar, deadline
+            )
 
     async def complete(
         self, prefix: str, suffix: str, max_tokens: int = 220, grammar: str | None = None
     ) -> str:
-        """Generate after the registered static prefix `prefix`, appending `suffix`."""
-        async with self._lock:
-            return await asyncio.to_thread(
-                self._complete_sync, prefix, suffix, max_tokens, grammar
-            )
+        return (await self.generate(prefix, suffix, max_tokens, grammar)).text

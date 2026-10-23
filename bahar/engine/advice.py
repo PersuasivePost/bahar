@@ -5,7 +5,7 @@ from datetime import timedelta
 from itertools import pairwise
 
 from bahar.config import weights as w
-from bahar.engine.conditions import cite
+from bahar.engine.conditions import cite, cite_time
 from bahar.engine.geo import angle_diff_deg, compass_word
 from bahar.engine.scoring import ScoringContext, VenueState, slot_hours
 from bahar.engine.sun import overlap_min
@@ -89,7 +89,8 @@ def _watch_for(
                 and angle_diff_deg(a.wind_dir_deg, b.wind_dir_deg) >= w.WIND_SHIFT_DEG):  # fmt: skip
             label = (f"wind turns from {compass_word(a.wind_dir_deg)} to {compass_word(b.wind_dir_deg)} "
                      f"around {b.t:%H:%M}")  # fmt: skip
-            ids = [c(a, "wind_dir_deg"), c(b, "wind_dir_deg"), st.exposure_ids.get(b.t, "")]
+            ids = [cite_time(store, v, b.t, "wind shift", ctx.weather_at), c(a, "wind_dir_deg"),
+                   c(b, "wind_dir_deg"), st.exposure_ids.get(b.t, "")]  # fmt: skip
             out.append(AdviceItem(code="wind_shift", label=label, evidence_ids=[i for i in ids if i]))
             break
     # Heat rising: the first hour after the start that reaches the "high" flag.
@@ -99,7 +100,8 @@ def _watch_for(
             hc = st.hours.get(t)
             if hc and hc.heat_flag in _HOT_FLAGS:
                 out.append(AdviceItem(code="heat_rising", label=f"heat stress rises from {t:%H:%M}",
-                                      evidence_ids=[c(hc, "wbgt")]))  # fmt: skip
+                                      evidence_ids=[cite_time(store, v, t, "heat stress rises", ctx.weather_at),
+                                                    c(hc, "wbgt")]))  # fmt: skip
                 break
             t += _HOUR
     for f in slot.factors:

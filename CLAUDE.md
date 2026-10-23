@@ -81,7 +81,11 @@ Jinja2 + Leaflet (CDN) for the map page.
 - **Model:** Qwen2.5-1.5B-Instruct (Apache-2.0 — note Qwen2.5-3B is *not* Apache-licensed,
   so we avoid it), served as GGUF Q4_K_M. Model repo/file come from env vars so the
   fine-tuned version swaps in without code changes.
-- **Hosting:** Hugging Face Docker Space, free CPU basic (2 vCPU, 16 GB), port 7860.
+- **Hosting:** this machine (i7-11800H, 8 physical cores, `N_THREADS=8`), uvicorn on port
+  7860, exposed through a Cloudflare quick tunnel (`cloudflared tunnel --url
+  http://localhost:7860`). The tunnel URL is public: /ask is rate-limited per client IP
+  (`CF-Connecting-IP`, trusted only from loopback). No HF Space. The model card and config
+  for the HF *model* repo live in `hf_model/`.
 - **Fine-tuning:** Unsloth (or TRL + PEFT) QLoRA on a Kaggle T4.
 
 ## Architecture
@@ -91,7 +95,8 @@ query
  → llm.parser (grammar-constrained JSON → ParsedQuery)
      → gate: out_of_scope | needs_clarification
  → engine.timewindow (deterministic: time spec → IST hourly windows)
- → data.geocode (Nominatim, India bias)
+ → data.geocode (Nominatim, India bias; a Devanagari place name is geocoded first, then the
+   Latin transliteration)
  → data.overpass venues (activity tag table) → select ≤ 12 candidates
  → in parallel:
      data.overpass context (≤ 2 km around candidates, ONE batched query)
@@ -159,7 +164,11 @@ comment with the reasoning or source.
   Handbook activity levels.
 - Parts of day (IST) are sets of **start hours** (inclusive; the session may run past the
   window end): early_morning 05–07, morning 06–10, midday 11–14, afternoon 12–16,
-  evening 16–19, night 19–22. No time given → next 24 h, recorded as an assumption.
+  evening 16–19, night 19–22; after_work 17–19 (set by a lexicon rule for "after work" /
+  "office ke baad" / "kaam ke baad", never by the SLM). No time given → next 24 h, recorded as
+  an assumption.
+- A stated age ("65 saal", "65 साल", "65 years") sets the profile: ≥ 60 → senior, ≤ 12 →
+  child; a duration ("2 saal se") does not.
 
 ### Health / age profiles (strictest applies when several match)
 
@@ -309,13 +318,23 @@ avoid ranges (merged blocked hours with their dominant reason); recommendation s
   (incl. Devanagari); a number word (small en/hi/mr list) **only when adjacent to a unit**
   (km, min, %, °, AQI, hours/ghante/तास…) **or a time word** (am/pm, baje, वाजता…) — so
   "one of the best" or Hindi "ek" pass; any venue or place name from this query's data
-  written outside a ref.
+  written outside a ref; the wrong script for the language; a labelled line citing another
+  section's facts (replaced by that template line).
+- Qualitative words are evidence too: each PM value comes with its NAQI category record
+  ("moderate (indicative)") and each WBGT value with its heat-flag record ("high heat
+  stress"). The composer describes air and heat only through those refs. The validator
+  rejects clean-air words (clean, fresh, saaf, acchi hawa, साफ, शुद्ध…) in a line citing air
+  worse than satisfactory, and a heat word followed by a ref that is not a temperature, heat
+  level or time.
 - On failure: one retry if the remaining latency budget allows (≥ 15 s), else straight to the
   deterministic template renderer. Templates exist in English and Hinglish: `hi` → Hinglish
   template, `mr` → English template, recorded as an assumption.
 - Composer modes: `full` (SLM writes the whole answer) or `summary` (SLM writes the
-  recommendation + why; carry / watch_for / avoid lists come from templates). If Step 1
-  measures generation < 8 tok/s on the Space, `summary` is the default.
+  recommendation + why; carry / watch_for / avoid lists come from templates). English and
+  Hinglish use `full` (measured ~12-15 tok/s with the composer grammar on this machine),
+  falling back to `summary` when < 10 s of the budget remain. Hindi and Marathi always use
+  `summary`: Devanagari costs ~2× the tokens (a 5-line Hindi answer ≈ 290 tokens, over the
+  200-token cap). One composer prefix per language.
 - Renderer replaces refs with formatted value + unit. The response includes the evidence
   list with sources and fetched_at.
 
@@ -324,11 +343,13 @@ avoid ranges (merged blocked hours with their dominant reason); recommendation s
 ```
 { in_scope: bool,
   activity: enum | null, activity_raw: str | null,
-  location_text: str | null, radius_km: float | null,
+  location_text: str | null, location_native: str | null (Devanagari, copied verbatim),
+  radius_km: float | null,
   time: { day: today | tomorrow | day_after | weekday:<mon..sun> | this_weekend |
                next_weekend | next_n_days | date:YYYY-MM-DD | null,
           n_days: int | null,
-          part: early_morning | morning | midday | afternoon | evening | night | any | null,
+          part: early_morning | morning | midday | afternoon | evening | night | after_work |
+                any | null,
           hour: 0–23 | null, around: sunrise | sunset | null },
   profile: { age_group: child | adult | senior | null,
              conditions: [asthma | copd | heart | pregnancy | other], group_size: int | null },
@@ -351,12 +372,15 @@ route sampling is deferred to Step 13.
 - `POST /ask {"query": str, "session_id"?: str}` and `GET /ask?q=...` (`&debug=1` adds the
   full hourly grid).
 - AskResponse: query_id, status (`ok | no_safe_window | needs_clarification | out_of_scope |
-  no_venues`), answer_text (markdown, user's language), recommendation,
+  no_venues | error`), answer_text (markdown, user's language), recommendation,
   alternatives, why_not, advice {carry, watch_for, avoid_when}, hourly (compact per venue per
   hour: score, pm25_local, naqi, wbgt, rain_prob, exposure, wind), evidence[], parsed,
-  assumptions[], degraded_sources[], grounding {validator_passed, fallback_used, retries}, map_url,
-  sources[], attribution, latency_ms {stage: ms}.
-- Latency target: p50 ≤ 30 s on the free 2-vCPU Space (budget in docs/plan.md). Parser and
+  assumptions[], degraded_sources[], grounding {validator_passed, fallback_used, retries,
+  mode, rejections}, map_url, sources[], attribution, latency_ms {stage: ms}.
+- `error` = internal failure or no usable forecast: a short apology in the user's language,
+  never a recommendation. Ground stations have a hard 5 s timeout; on timeout the answer
+  continues without the station correction (reported in degraded_sources).
+- Latency target: p50 ≤ 30 s on this machine (budget in docs/plan.md and config/budget.py). Parser and
   composer have different static prefixes, so save each prefix's KV state at startup and
   restore it before each call (llama-cpp-python only reuses the previous prompt's prefix).
   Keep generation ≤ 220 tokens. Thread count from the CPU affinity / cgroup quota, not

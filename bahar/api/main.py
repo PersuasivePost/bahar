@@ -1,24 +1,31 @@
 import asyncio
 import contextvars
+import ipaddress
 import json
 import logging
 import time
 import uuid
+from collections import defaultdict, deque
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from datetime import datetime
+from typing import Annotated
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Query, Request, Response
+from fastapi.responses import JSONResponse
 
 from bahar import __version__
 from bahar.config.settings import get_settings
+from bahar.config.sources import IST
+from bahar.data.http import close_client, get_client
+from bahar.llm import templates
+from bahar.llm.composer import register_composer
 from bahar.llm.parser import register_parser
 from bahar.llm.runtime import LlmRuntime
-from bahar.models import AskRequest, AskResponse, Grounding, Health, Status
+from bahar.models import AskRequest, AskResponse, Health
+from bahar.pipeline import ask
 
-ATTRIBUTION = (
-    "© OpenStreetMap contributors · "
-    "Weather & air quality: Open-Meteo.com, CAMS (Copernicus)"
-)
+RATE_WINDOW_S = 60.0
 
 request_id_var: contextvars.ContextVar[str] = contextvars.ContextVar("request_id", default="-")
 
@@ -44,6 +51,8 @@ def configure_logging() -> None:
     root.handlers = [handler]
     root.setLevel(logging.INFO)
     logging.getLogger("uvicorn.access").disabled = True  # replaced by the request log below
+    # httpx logs full URLs at INFO, including API tokens in query strings (WAQI).
+    logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 configure_logging()
@@ -52,18 +61,62 @@ log = logging.getLogger("bahar.api")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    get_client()  # one shared httpx client for every fetcher
     runtime = LlmRuntime(get_settings())
     app.state.llm = runtime
     await asyncio.to_thread(runtime.load)
     if runtime.health.model_loaded:
-        t0 = time.perf_counter()
-        n = await asyncio.to_thread(register_parser, runtime)
-        log.info("parser prefix: %d tokens in %d ms", n, (time.perf_counter() - t0) * 1000)
+        for name, register in (("parser", register_parser), ("composer", register_composer)):
+            t0 = time.perf_counter()
+            n = await asyncio.to_thread(register, runtime)
+            log.info("%s prefix: %d tokens in %d ms", name, n, (time.perf_counter() - t0) * 1000)
     log.info("startup complete: %s", runtime.health.model_dump_json())
-    yield
+    try:
+        yield
+    finally:
+        await close_client()
 
 
 app = FastAPI(title="Bahar", version=__version__, lifespan=lifespan)
+
+
+_hits: defaultdict[str, deque[float]] = defaultdict(deque)
+
+
+def client_ip(request: Request) -> str:
+    """Behind the Cloudflare tunnel every request arrives from cloudflared on loopback; the
+    visitor's address is in CF-Connecting-IP. That header is trusted only from loopback."""
+    host = request.client.host if request.client else "unknown"
+    forwarded = request.headers.get("cf-connecting-ip")
+    try:
+        loopback = ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        loopback = False
+    return forwarded.strip() if forwarded and loopback else host
+
+
+def rate_limited(ip: str, limit: int, now: float) -> bool:
+    """Sliding window: at most `limit` requests per RATE_WINDOW_S per address."""
+    hits = _hits[ip]
+    while hits and now - hits[0] > RATE_WINDOW_S:
+        hits.popleft()
+    if len(hits) >= limit:
+        return True
+    hits.append(now)
+    return False
+
+
+@app.middleware("http")
+async def rate_limit(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+    if request.url.path == "/ask":
+        limit = get_settings().rate_limit_per_min
+        if rate_limited(client_ip(request), limit, time.monotonic()):
+            return JSONResponse(
+                status_code=429,
+                content={"error": "rate_limited", "message": templates.BUSY.format(n=limit)},
+                headers={"Retry-After": str(int(RATE_WINDOW_S))},
+            )
+    return await call_next(request)
 
 
 @app.middleware("http")
@@ -95,23 +148,19 @@ async def health(request: Request) -> Health:
     )
 
 
-def stub_response(query: str) -> AskResponse:
-    """Step 1 placeholder: a valid AskResponse until the pipeline is wired in."""
-    return AskResponse(
-        query_id=request_id_var.get(),
-        status=Status.needs_clarification,
-        answer_text=f"Bahar is not wired up yet (scaffold stub). Received: {query!r}",
-        assumptions=["Stub response: no parsing, data fetching or recommendation was done."],
-        grounding=Grounding(validator_passed=True, fallback_used=True),
-        attribution=ATTRIBUTION,
-    )
+async def _ask(request: Request, query: str, debug: bool) -> AskResponse:
+    # query_id is ours, never the client's X-Request-ID: the map page will use it as a file name.
+    return await ask(request.app.state.llm, query, datetime.now(IST),
+                     query_id=uuid.uuid4().hex[:12], debug=debug)  # fmt: skip
 
 
 @app.post("/ask")
-async def ask_post(body: AskRequest) -> AskResponse:
-    return stub_response(body.query)
+async def ask_post(request: Request, body: AskRequest, debug: bool = False) -> AskResponse:
+    return await _ask(request, body.query, debug)
 
 
 @app.get("/ask")
-async def ask_get(q: str, debug: bool = False) -> AskResponse:
-    return stub_response(q)
+async def ask_get(
+    request: Request, q: Annotated[str, Query(min_length=1, max_length=1000)], debug: bool = False
+) -> AskResponse:
+    return await _ask(request, q, debug)

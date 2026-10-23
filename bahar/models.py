@@ -35,6 +35,7 @@ class Part(StrEnum):
     afternoon = "afternoon"
     evening = "evening"
     night = "night"
+    after_work = "after_work"  # set only by the parser's lexicon rule, never by the SLM
     any = "any"
 
 
@@ -104,6 +105,7 @@ class Status(StrEnum):
     needs_clarification = "needs_clarification"
     out_of_scope = "out_of_scope"
     no_venues = "no_venues"
+    error = "error"  # internal failure or no forecast: an apology, never a recommendation
 
 
 # ---------------------------------------------------------------- parser output
@@ -138,6 +140,7 @@ class ParsedQuery(BaseModel):
     activity: Activity | None = None
     activity_raw: str | None = None
     location_text: str | None = None
+    location_native: str | None = None  # the place as written in Devanagari (geocoded first)
     radius_km: float | None = None
     time: TimeSpec = TimeSpec()
     profile: Profile = Profile()
@@ -528,6 +531,60 @@ class EngineResult(BaseModel):
     notes: list[str] = []  # e.g. the medical disclaimer
 
 
+# ---------------------------------------------------------------- grounded composer input
+
+
+class FactItem(BaseModel):
+    """One phrase of the facts block: a reason / advice code, the evidence ids filling its
+    placeholders, an optional code-chosen qualitative word, and the engine's own label (used
+    only when it contains no digit)."""
+
+    code: str
+    refs: dict[str, str] = {}  # placeholder -> evidence id
+    word: str | None = None  # e.g. NAQI category, heat flag, "less", "lacks"
+    label: str = ""
+    gate: bool = False
+
+
+class SlotFacts(BaseModel):
+    venue: str  # v# id
+    kind: str  # "park", "pitch", ...
+    when: str  # e# id of the time range ("Sat 24 Oct, 07:00–07:45"; no day when on the best's)
+    blocked: bool = False
+    reasons: list[FactItem] = []
+
+
+class FactSheet(BaseModel):
+    """Everything the composer may say, every value as an evidence id."""
+
+    lang: Lang
+    activity: Activity
+    profile: list[str] = []  # health profile keys: asthma_copd, heart, senior, child, pregnancy
+    status: Literal["ok", "no_safe_window"]
+    window: str  # e# id of the requested window label
+    best: SlotFacts
+    alt_venue: SlotFacts | None = None
+    alt_time: SlotFacts | None = None
+    why_not: SlotFacts | None = None  # reasons = [the decisive factor]
+    improves_at: str | None = None  # e# id (no_safe_window only)
+    carry: list[FactItem] = []
+    watch: list[FactItem] = []
+    avoid: list[FactItem] = []
+    modelled_aq: bool = False  # PM values are cited: say they are modelled
+    disclaimer: bool = False  # health profile: not medical advice
+
+
+class CitedResult(BaseModel):
+    """Engine output after renumbering: only cited evidence, ids e1..eN / v0..vN in the order
+    the facts block uses them, and every id inside the models rewritten to match."""
+
+    facts: FactSheet
+    recommendation: Recommendation
+    advice: Advice | None = None
+    hourly: list[HourConditions] = []
+    evidence: list[Evidence]
+
+
 # ---------------------------------------------------------------- API
 
 
@@ -535,6 +592,8 @@ class Grounding(BaseModel):
     validator_passed: bool
     fallback_used: bool
     retries: int = 0
+    mode: Literal["full", "summary", "template", "none"] = "none"  # none: no answer composed
+    rejections: list[str] = []  # validator reasons, one per rejected attempt
 
 
 class HourCompact(BaseModel):

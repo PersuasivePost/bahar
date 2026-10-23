@@ -72,7 +72,7 @@ PARSER_SCHEMA: Final[dict[str, Any]] = {
                     ]
                 },
                 "n_days": {"type": "integer"},
-                "part": {"enum": [p.value for p in Part if p is not Part.any]},
+                "part": {"enum": [p.value for p in Part if p not in (Part.any, Part.after_work)]},
                 "hour": {"type": "integer"},
                 "around": {"enum": ["sunrise", "sunset"]},
             },
@@ -97,6 +97,8 @@ PARSER_SCHEMA: Final[dict[str, Any]] = {
             "properties": {"from": _text(60), "to": _text(60)},
             "additionalProperties": False,
         },
+        # Last, so adding it left the decoding of every other key unchanged.
+        "location_native": _text(60),
     },
     "required": ["in_scope", "lang"],
     "additionalProperties": False,
@@ -125,6 +127,11 @@ async def parse_query(runtime: LlmRuntime, query: str, now: datetime) -> ParseRe
         log.warning("parser failed; raw=%r", raw, exc_info=True)
         return _fallback(query, today, raw, f"parser output unusable ({type(exc).__name__})", t0)
     return ParseResult(parsed=parsed, raw=raw, assumptions=assumptions, ms=_ms(t0))
+
+
+def rule_based_parse(query: str, now: datetime, why: str) -> ParseResult:
+    """The fallback parse on its own (e.g. when the SLM parse timed out)."""
+    return _fallback(query, now.astimezone(IST).date(), "", why, time.perf_counter())
 
 
 def _fallback(query: str, today: date, raw: str, why: str, t0: float) -> ParseResult:
@@ -166,6 +173,8 @@ def normalize(data: dict[str, Any], query: str, today: date) -> tuple[ParsedQuer
             out["activity"] = guess.value if guess else None
 
     out["location_text"] = _location(out.get("location_text"), query, assumptions)
+    native = _native(out.get("location_native"), query) or _native_from_query(query)
+    out["location_native"] = native if out["location_text"] else None
     out["commute"] = _commute(out, query, assumptions)
     out["radius_km"] = _radius(out.get("radius_km"), query, assumptions)
     out["time"] = _time(dict(out.get("time", {})), query, today, assumptions)
@@ -192,6 +201,56 @@ def _location(loc: str | None, query: str, assumptions: list[str]) -> str | None
     if all(w in lx.HINGLISH or any(c.fullmatch(w) for c in company) for w in words):
         return None  # "bacchon", "dost": company, not a place
     return _with_city(loc, query)
+
+
+def _native(loc: str | None, query: str) -> str | None:
+    """The place as the user wrote it in Devanagari, when the model copied it from the query:
+    extended to the whole place phrase, glued Marathi suffixes cut. Geocoded before the
+    transliteration (OSM has name:hi for many places)."""
+    loc = loc.strip(" ,") if loc else None
+    if not loc or not lx.DEVANAGARI.search(loc) or (start := query.find(loc)) < 0:
+        return None
+    words = loc.split()
+    for w in re.findall(r"[^\s,।?!.]+", query[start + len(loc) :])[:3]:
+        if _glued(words[-1]) or w in lx.NATIVE_STOP_WORDS or not lx.DEVANAGARI.search(w):
+            break  # a glued suffix ("तलावाजवळ") ends the place phrase too
+        words.append(w)
+    for suffix in lx.NATIVE_SUFFIXES:
+        if words[-1].endswith(suffix) and len(words[-1]) > len(suffix) + 1:
+            words[-1] = words[-1][: -len(suffix)]
+            break
+    return " ".join(words)
+
+
+def _native_from_query(query: str) -> str | None:
+    """The Devanagari words right before the first locative postposition (or a word with one
+    glued on), skipping day / time words: "कल सुबह इंडिया गेट के पास" -> "इंडिया गेट"."""
+    if not lx.DEVANAGARI.search(query):
+        return None
+    words = re.findall(r"[^\s,।?!.]+", query)
+    m = lx.NATIVE_LOCATIVE.search(query)
+    end = len(re.findall(r"[^\s,।?!.]+", query[: m.start()])) if m else None
+    glued = next((i for i, w in enumerate(words) if _glued(w)), None)
+    if glued is not None and (end is None or glued < end):
+        end = glued + 1
+    if not end:
+        return None
+    place: list[str] = []
+    for w in reversed(words[:end]):
+        if (len(place) >= lx.NATIVE_MAX_WORDS or w in lx.NATIVE_STOP_WORDS or not lx.DEVANAGARI.search(w)
+                or _time_word(w)):  # fmt: skip
+            break
+        place.insert(0, w)
+    return _native(" ".join(place), query) if place else None
+
+
+def _time_word(word: str) -> bool:
+    pats = [lx.TODAY, lx.TOMORROW, lx.DAY_AFTER, *lx.WEEKDAYS.values(), *lx.PART_WORDS.values()]
+    return any(p.fullmatch(word) for p in pats)
+
+
+def _glued(word: str) -> bool:
+    return any(word.endswith(sfx) and len(word) > len(sfx) + 1 for sfx in lx.NATIVE_SUFFIXES)
 
 
 def _with_city(name: str, query: str) -> str:
@@ -271,6 +330,10 @@ def _time(t: dict[str, Any], query: str, today: date, assumptions: list[str]) ->
             t["hour"] = n + 12 if part != "morning" and 1 <= n <= pm_max else n
             break
 
+    if lx.AFTER_WORK.search(query) and t.get("hour") is None:
+        t["part"] = Part.after_work.value
+        assumptions.append("'after work' read as a start between 17:00 and 19:00")
+
     rise, sets = bool(lx.SUNRISE.search(query)), bool(lx.SUNSET.search(query))
     if rise != sets:
         t["around"] = "sunrise" if rise else "sunset"
@@ -303,10 +366,24 @@ def _profile(profile: dict[str, Any], query: str) -> dict[str, Any]:
         profile.pop("age_group")
     if profile.get("age_group") in (None, "adult") and lx.SENIOR_SAID.search(query):
         profile["age_group"] = "senior"
+    if (age := _said_age(query)) is not None:
+        if age >= lx.SENIOR_AGE:
+            profile["age_group"] = "senior"
+        elif age <= lx.CHILD_AGE:
+            profile["age_group"] = "child"
     size = profile.get("group_size")
     if size is not None and not 1 <= size <= MAX_GROUP_SIZE:
         profile.pop("group_size")
     return profile
+
+
+def _said_age(query: str) -> int | None:
+    """An age the user stated ("65 saal", "मेरी उम्र 65 साल"), not a duration ("2 saal se")."""
+    for m in lx.AGE.finditer(query):
+        if lx.DURATION_AFTER.match(query[m.end() :]) or lx.DURATION_BEFORE.search(query[: m.start()]):
+            continue
+        return int(m.group("n") or m.group("m"))  # int() reads Devanagari digits too
+    return None
 
 
 def _date_on_or_after(iso: str, today: date) -> date | None:
