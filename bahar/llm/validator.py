@@ -89,8 +89,8 @@ def validate(
         problems.append("a time range cites values that are not times")
     if air_levels is not None:
         problems += _clean_air_claims(text, air_levels)
-    if heat_refs is not None and (bad := _heat_misuse(text, heat_refs)):
-        problems.append(bad)
+    if heat_refs is not None:
+        problems += [msg for _, msg in heat_misuse(text, heat_refs)]
     return problems
 
 
@@ -103,15 +103,20 @@ def _clean_air_claims(text: str, air_levels: Mapping[str, str]) -> list[str]:
     return out
 
 
-def _heat_misuse(text: str, heat_refs: Collection[str]) -> str | None:
-    tokens = _TOKEN.findall(text)
-    for i, tok in enumerate(tokens):
-        if tok.casefold() not in lx.HEAT_WORDS:
-            continue
-        ref = next((m for t in tokens[i + 1 : i + 1 + lx.HEAT_REF_WINDOW] if (m := REF.fullmatch(t))), None)
-        if ref and ref.group(1) not in heat_refs:
-            return f"heat word '{tok}' describes {ref.group(1)}, which is not a temperature or heat level"
-    return None
+def heat_misuse(text: str, heat_refs: Collection[str]) -> list[tuple[int, str]]:
+    """(line index, message) for a heat word followed, on the same line, by a ref that is not
+    a temperature, heat level or time."""
+    out = []
+    for n, line in enumerate(text.splitlines()):
+        tokens = _TOKEN.findall(line)
+        for i, tok in enumerate(tokens):
+            if tok.casefold() not in lx.HEAT_WORDS:
+                continue
+            ref = next((m for t in tokens[i + 1 : i + 1 + lx.HEAT_REF_WINDOW] if (m := REF.fullmatch(t))), None)
+            if ref and ref.group(1) not in heat_refs:
+                out.append((n, f"heat word '{tok}' describes {ref.group(1)}, which is not a temperature or heat level"))
+                break
+    return out
 
 
 def line_section(line: str, index: int, keys: Collection[str]) -> str | None:

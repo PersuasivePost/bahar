@@ -89,6 +89,7 @@ class ReasonCode(StrEnum):
 class SourceKey(StrEnum):
     nominatim = "nominatim"
     overpass = "overpass"
+    osm_extract = "osm_extract"  # local index built from Geofabrik extracts
     open_meteo_forecast = "open_meteo_forecast"
     open_meteo_air_quality = "open_meteo_air_quality"
     waqi = "waqi"
@@ -119,6 +120,7 @@ class TimeSpec(BaseModel):
     part: Part | None = None
     hour: int | None = Field(default=None, ge=0, le=23)
     around: Literal["sunrise", "sunset"] | None = None
+    now: bool = False  # "right now": set by the parser's lexicon rule, never by the SLM
 
 
 class Profile(BaseModel):
@@ -486,6 +488,7 @@ class WhyNot(BaseModel):
     venue_id: str
     slot: ScoredSlot
     decisive: Factor
+    close: bool = False  # within the score gap, or the decisive PM2.5 difference is inside the band
 
 
 class Recommendation(BaseModel):
@@ -634,6 +637,36 @@ class AskResponse(BaseModel):
     latency_ms: dict[str, int] = {}
 
 
+class MapVenue(BaseModel):
+    id: str
+    name: str
+    kind: str
+    lat: float
+    lon: float
+
+
+class MapSnapshot(BaseModel):
+    """Everything the map page draws, persisted per answer (CACHE_DIR/maps/<query_id>.json)."""
+
+    query_id: str
+    query: str
+    created_at: datetime
+    activity: Activity
+    origin: Place
+    radius_km: float
+    venues: list[MapVenue]
+    best_venue_id: str
+    why_not_venue_id: str | None = None
+    hours: list[datetime]  # slider stops: the window's session start hours
+    slots: list[ScoredSlot]
+    hourly: list[HourCompact]  # wind per venue per hour
+    sources: dict[str, list[PollutionSource]]  # venue id -> exposure sources
+    answer_text: str
+    evidence: list[Evidence]
+    degraded_sources: list[DegradedSource] = []
+    attribution: str
+
+
 class LlmHealth(BaseModel):
     model_loaded: bool
     model_repo: str
@@ -650,3 +683,4 @@ class Health(BaseModel):
     status: Literal["ok", "degraded"]
     version: str
     llm: LlmHealth
+    osm_extract: str | None = None  # "OpenStreetMap (Geofabrik extract, 2026-10-23)" when the local index is loaded

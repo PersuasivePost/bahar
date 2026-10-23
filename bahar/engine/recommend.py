@@ -93,7 +93,27 @@ def _why_not(
     if not others:
         return None
     slot = next(s for s in ranked if s.venue_id == others[0])
-    return WhyNot(venue_id=slot.venue_id, slot=slot, decisive=_decisive(slot, best, states[slot.venue_id]))
+    decisive = _decisive(slot, best, states[slot.venue_id])
+    return WhyNot(venue_id=slot.venue_id, slot=slot, decisive=decisive,
+                  close=_is_close_call(best, slot, decisive, states[slot.venue_id]))  # fmt: skip
+
+
+def _is_close_call(best: ScoredSlot, slot: ScoredSlot, decisive: Factor, state: VenueState) -> bool:
+    """Not a real loss: scores within the configured gap (neither blocked), or the decisive
+    factor is air quality and the PM2.5 means differ by less than the loser's own uncertainty
+    band (mean of its hourly low-high half-widths over the slot)."""
+    if slot.blocked or best.blocked:
+        return False
+    if best.score - slot.score < w.WHY_NOT_CLOSE_SCORE_GAP:
+        return True
+    if decisive.code != ReasonCode.air_quality or best.pm25_mean is None or slot.pm25_mean is None:
+        return False
+    hours = [h for t, h in state.hours.items() if slot.start <= t < slot.end and h.pm25_low is not None
+             and h.pm25_high is not None]  # fmt: skip
+    if not hours:
+        return False
+    half_band = sum((h.pm25_high - h.pm25_low) / 2 for h in hours) / len(hours)  # type: ignore[operator]
+    return abs(slot.pm25_mean - best.pm25_mean) <= half_band
 
 
 def avoid_ranges(ctx: ScoringContext, st: VenueState, starts: Sequence[datetime]) -> list[AvoidRange]:

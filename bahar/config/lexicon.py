@@ -53,6 +53,15 @@ TODAY: Final = re.compile(
 TOMORROW: Final = re.compile(
     r"\b(kal|tomorrow|tmrw|tmr|tomorow|tommorow|udya)\b|" + _dv("कल|उद्या"), _I
 )
+# "right now": the window is the current hour and the 3 next (weights.NOW_WINDOW_H).
+NOW: Final = re.compile(
+    r"\b(right\s+now|just\s+now|this\s+moment|at\s+the\s+moment|abhi|ab|aatta|atta)\b|" + _dv("अभी|आत्ता|अब"), _I
+)
+# Day words the model's multi-day answers need support from in the question.
+WEEKEND: Final = re.compile(r"\b(weekend|weekends|vikend|wknd)\b|" + _dv("वीकेंड|सप्ताहांत|शनि-रवि"), _I)
+MULTI_DAY: Final = re.compile(
+    r"\b(days|din|week|hafte|next\s+few)\b|" + _dv("दिन|दिवस|हफ्ते|आठवडा|आठवड्यात"), _I
+)
 WEEKDAYS: Final[dict[str, re.Pattern[str]]] = {
     "mon": re.compile(r"\b(monday|somvar|somwar)\b|सोमवार", _I),
     "tue": re.compile(r"\b(tuesday|mangalvar|mangalwar)\b|मंगलवार|मंगळवार", _I),

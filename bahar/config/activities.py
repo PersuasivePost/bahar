@@ -245,6 +245,30 @@ COMMUTE_ACTIVITIES: Final = frozenset({Activity.cycling, Activity.walking, Activ
 
 # ---------------------------------------------------------------- candidate selection
 
+# Nominatim search words for the venue fallback when Overpass is down (most useful first).
+NOMINATIM_KEYWORDS: Final[dict[Activity, tuple[str, ...]]] = {
+    Activity.running: ("park", "garden", "stadium"),
+    Activity.walking: ("park", "garden", "promenade"),
+    Activity.cycling: ("park", "garden", "cycle track"),
+    Activity.golf: ("golf course", "golf club"),
+    Activity.cricket: ("cricket ground", "stadium", "sports ground"),
+    Activity.football: ("football ground", "turf", "stadium"),
+    Activity.tennis: ("tennis court", "tennis club", "sports complex"),
+    Activity.hiking: ("fort", "viewpoint", "nature reserve"),
+    Activity.picnic: ("park", "garden", "picnic spot"),
+    Activity.event: ("park", "ground", "event venue"),
+    Activity.photography: ("viewpoint", "fort", "park"),
+}  # fmt: skip
+
+# Venue purity: OSM often tags a plain park as leisure=golf_course. For the activities listed,
+# a candidate's name must also look like its kind (checked on top of the tag selectors).
+NAME_MUST_MATCH: Final[dict[Activity, re.Pattern[str]]] = {
+    Activity.golf: re.compile(r"golf|course|links|club|country|gymkhana|greens", re.I),
+}
+# Names that are survey labels, not places: "H-15_Rpoint", "P3 ground"; or too short to read.
+BAD_NAME: Final = re.compile(r"_|^[A-Za-z]{1,3}[-_ ]?\d")
+MIN_NAME_LETTERS: Final = 3
+
 MAX_CANDIDATES: Final = 12
 EXCLUDED_LEISURE: Final = frozenset({"dog_park", "playground"})
 

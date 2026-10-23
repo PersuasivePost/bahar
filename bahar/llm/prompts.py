@@ -126,7 +126,8 @@ Write in {lang}, one short line per section:
 1. In bold: the best place and time (or: no safe time, and the least-bad option).
 2. {why}: two or three reasons from the facts.
 3. {carry}, 4. {watch}, 5. {avoid}: from the facts; leave a line out if it has no facts.
-6. {why_not}: one line about the place in "Why not".
+6. {why_not}: one line about the place in "Why not". If the facts say "Close call", instead \
+write that the place is nearly as good, without a label.
 Keep it under one hundred words."""
 
 _SHORT_FORMAT = """\

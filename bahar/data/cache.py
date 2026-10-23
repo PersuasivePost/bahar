@@ -53,3 +53,28 @@ async def cached(
     if result.value is not None and clean:
         await asyncio.to_thread(_cache().set, key, result, expire=ttl_s)
     return result
+
+
+async def cached_stale(
+    key: str, fresh_ttl_s: int, stale_ttl_s: int, fetch: Callable[[], Awaitable[Fetch[T]]]
+) -> Fetch[T]:
+    """Like `cached`, but entries live `stale_ttl_s` and are fresh for `fresh_ttl_s`. When the
+    live fetch fails (no value), the stale entry is served with `stale_days` set and the live
+    failure kept in `degraded`."""
+    started = time.perf_counter()
+    entry: tuple[float, Fetch[T]] | None = await asyncio.to_thread(_cache().get, key)
+    age_s = time.time() - entry[0] if entry else None
+    if entry is not None and age_s is not None and age_s < fresh_ttl_s:
+        return entry[1].model_copy(
+            update={"cached": True, "elapsed_ms": int((time.perf_counter() - started) * 1000)}
+        )
+    result = await fetch()
+    result.elapsed_ms = int((time.perf_counter() - started) * 1000)
+    if result.value is not None and not result.degraded:
+        await asyncio.to_thread(_cache().set, key, (time.time(), result), expire=stale_ttl_s)
+    elif result.value is None and entry is not None and age_s is not None:
+        return entry[1].model_copy(update={
+            "cached": True, "stale_days": int(age_s // 86400), "degraded": result.degraded,
+            "elapsed_ms": result.elapsed_ms,
+        })  # fmt: skip
+    return result

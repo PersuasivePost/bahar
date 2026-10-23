@@ -1,0 +1,440 @@
+429 combinations, 429 to do
+1/429 Powai, Mumbai / running: ok
+2/429 Powai, Mumbai / walking: ok
+3/429 Powai, Mumbai / cycling: ok
+4/429 Powai, Mumbai / golf: ok
+5/429 Powai, Mumbai / cricket: ok
+6/429 Powai, Mumbai / football: ok
+7/429 Powai, Mumbai / tennis: ok
+overpass/context attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/context attempt 2 failed: overpass-api.de: timed out after 12s
+8/429 Powai, Mumbai / hiking: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+9/429 Powai, Mumbai / picnic: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/venues attempt 3 failed: overpass.kumi.systems: timed out after 12s
+10/429 Powai, Mumbai / event: FAILED
+overpass/venues attempt 1 failed: overpass.private.coffee: timed out after 12s
+11/429 Powai, Mumbai / photography: ok
+overpass/context attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/context attempt 2 failed: overpass-api.de: timed out after 12s
+12/429 Andheri, Mumbai / running: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+13/429 Andheri, Mumbai / walking: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/venues attempt 3 failed: overpass.kumi.systems: timed out after 12s
+14/429 Andheri, Mumbai / cycling: FAILED
+overpass/venues attempt 1 failed: overpass.private.coffee: timed out after 12s
+15/429 Andheri, Mumbai / golf: ok
+16/429 Andheri, Mumbai / cricket: ok
+17/429 Andheri, Mumbai / football: ok
+18/429 Andheri, Mumbai / tennis: ok
+overpass/context attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/context attempt 2 failed: overpass-api.de: timed out after 12s
+19/429 Andheri, Mumbai / hiking: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+20/429 Andheri, Mumbai / picnic: FAILED
+21/429 Andheri, Mumbai / event: ok
+22/429 Andheri, Mumbai / photography: ok
+overpass/context attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/context attempt 2 failed: overpass-api.de: timed out after 12s
+23/429 Bandra, Mumbai / running: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+24/429 Bandra, Mumbai / walking: FAILED
+overpass/context attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/context attempt 2 failed: overpass-api.de: timed out after 12s
+25/429 Bandra, Mumbai / cycling: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+26/429 Bandra, Mumbai / golf: FAILED
+overpass/context attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/context attempt 2 failed: overpass-api.de: timed out after 12s
+27/429 Bandra, Mumbai / cricket: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+28/429 Bandra, Mumbai / football: FAILED
+29/429 Bandra, Mumbai / tennis: ok
+30/429 Bandra, Mumbai / hiking: ok
+31/429 Bandra, Mumbai / picnic: ok
+32/429 Bandra, Mumbai / event: ok
+33/429 Bandra, Mumbai / photography: ok
+overpass/context attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/context attempt 2 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/context attempt 3 failed: overpass.kumi.systems: timed out after 12s
+34/429 Koregaon Park, Pune / running: FAILED
+overpass/venues attempt 1 failed: overpass.private.coffee: timed out after 12s
+overpass/venues attempt 2 failed: overpass.openstreetmap.fr: timed out after 12s
+35/429 Koregaon Park, Pune / walking: FAILED
+overpass/venues attempt 1 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/venues attempt 2 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 3 failed: overpass.private.coffee: timed out after 12s
+36/429 Koregaon Park, Pune / cycling: FAILED
+37/429 Koregaon Park, Pune / golf: ok
+38/429 Koregaon Park, Pune / cricket: ok
+39/429 Koregaon Park, Pune / football: ok
+40/429 Koregaon Park, Pune / tennis: ok
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: timed out after 12s
+41/429 Koregaon Park, Pune / hiking: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+42/429 Koregaon Park, Pune / picnic: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/venues attempt 3 failed: overpass.kumi.systems: timed out after 12s
+43/429 Koregaon Park, Pune / event: FAILED
+overpass/venues attempt 1 failed: overpass.private.coffee: timed out after 12s
+overpass/venues attempt 2 failed: overpass.openstreetmap.fr: timed out after 12s
+44/429 Koregaon Park, Pune / photography: FAILED
+overpass/venues attempt 1 failed: overpass-api.de: timed out after 12s
+overpass/venues attempt 2 failed: overpass.kumi.systems: timed out after 12s
+45/429 Whitefield, Bengaluru / running: FAILED
+overpass/venues attempt 1 failed: overpass.private.coffee: timed out after 12s
+46/429 Whitefield, Bengaluru / walking: ok
+overpass/context attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/context attempt 2 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/context attempt 3 failed: overpass.kumi.systems: timed out after 12s
+47/429 Whitefield, Bengaluru / cycling: FAILED
+overpass/venues attempt 1 failed: overpass.private.coffee: timed out after 12s
+overpass/context attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/context attempt 2 failed: overpass-api.de: timed out after 12s
+48/429 Whitefield, Bengaluru / golf: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+49/429 Whitefield, Bengaluru / cricket: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/venues attempt 3 failed: overpass.kumi.systems: timed out after 12s
+50/429 Whitefield, Bengaluru / football: FAILED
+overpass/venues attempt 1 failed: overpass.private.coffee: timed out after 12s
+51/429 Whitefield, Bengaluru / tennis: ok
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/venues attempt 3 failed: overpass.kumi.systems: timed out after 12s
+52/429 Whitefield, Bengaluru / hiking: FAILED
+overpass/venues attempt 1 failed: overpass.private.coffee: timed out after 12s
+overpass/venues attempt 2 failed: overpass.openstreetmap.fr: timed out after 12s
+53/429 Whitefield, Bengaluru / picnic: FAILED
+overpass/venues attempt 1 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/venues attempt 2 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 3 failed: overpass.private.coffee: timed out after 12s
+54/429 Whitefield, Bengaluru / event: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: timed out after 12s
+55/429 Whitefield, Bengaluru / photography: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+56/429 Hinjewadi, Pune / running: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/venues attempt 3 failed: overpass.kumi.systems: timed out after 12s
+57/429 Hinjewadi, Pune / walking: FAILED
+overpass/venues attempt 1 failed: overpass.private.coffee: timed out after 12s
+overpass/venues attempt 2 failed: overpass.openstreetmap.fr: timed out after 12s
+58/429 Hinjewadi, Pune / cycling: FAILED
+overpass/venues attempt 1 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/venues attempt 2 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 3 failed: overpass.private.coffee: timed out after 12s
+59/429 Hinjewadi, Pune / golf: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: timed out after 12s
+60/429 Hinjewadi, Pune / cricket: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+61/429 Hinjewadi, Pune / football: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/venues attempt 3 failed: overpass.kumi.systems: timed out after 12s
+62/429 Hinjewadi, Pune / tennis: FAILED
+overpass/venues attempt 1 failed: overpass.private.coffee: timed out after 12s
+overpass/venues attempt 2 failed: overpass.openstreetmap.fr: timed out after 12s
+63/429 Hinjewadi, Pune / hiking: FAILED
+overpass/venues attempt 1 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/venues attempt 2 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 3 failed: overpass.private.coffee: timed out after 12s
+64/429 Hinjewadi, Pune / picnic: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: timed out after 12s
+65/429 Hinjewadi, Pune / event: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+66/429 Hinjewadi, Pune / photography: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: timed out after 12s
+67/429 Lonavala / running: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+68/429 Lonavala / walking: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: HTTP 502 <html> <head><title>502 Bad Gateway</title></head> <body> <center><h1>502 Bad Gateway</h1></center> <hr><center>nginx/1.22.1</center> </body> </html> 
+overpass/venues attempt 2 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/venues attempt 3 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 4 failed: overpass.private.coffee: timed out after 12s
+69/429 Lonavala / cycling: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: timed out after 12s
+70/429 Lonavala / golf: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+71/429 Lonavala / cricket: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: HTTP 502 <html> <head><title>502 Bad Gateway</title></head> <body> <center><h1>502 Bad Gateway</h1></center> <hr><center>nginx/1.22.1</center> </body> </html> 
+overpass/venues attempt 2 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/venues attempt 3 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 4 failed: overpass.private.coffee: timed out after 12s
+72/429 Lonavala / football: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: timed out after 12s
+73/429 Lonavala / tennis: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+74/429 Lonavala / hiking: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/venues attempt 3 failed: overpass.kumi.systems: timed out after 12s
+75/429 Lonavala / picnic: FAILED
+overpass/venues attempt 1 failed: overpass.private.coffee: timed out after 12s
+overpass/venues attempt 2 failed: overpass.openstreetmap.fr: timed out after 12s
+76/429 Lonavala / event: FAILED
+overpass/venues attempt 1 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/venues attempt 2 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 3 failed: overpass.private.coffee: timed out after 12s
+77/429 Lonavala / photography: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/venues attempt 3 failed: overpass.kumi.systems: timed out after 12s
+78/429 Mumbai / running: FAILED
+overpass/venues attempt 1 failed: overpass.private.coffee: timed out after 12s
+overpass/venues attempt 2 failed: overpass.openstreetmap.fr: timed out after 12s
+79/429 Mumbai / walking: FAILED
+overpass/venues attempt 1 failed: overpass-api.de: timed out after 12s
+overpass/venues attempt 2 failed: overpass.kumi.systems: timed out after 12s
+80/429 Mumbai / cycling: FAILED
+overpass/venues attempt 1 failed: overpass.private.coffee: timed out after 12s
+overpass/venues attempt 2 failed: overpass.openstreetmap.fr: timed out after 12s
+81/429 Mumbai / golf: FAILED
+overpass/venues attempt 1 failed: overpass-api.de: timed out after 12s
+overpass/venues attempt 2 failed: overpass.kumi.systems: timed out after 12s
+82/429 Mumbai / cricket: FAILED
+overpass/venues attempt 1 failed: overpass.private.coffee: timed out after 12s
+overpass/venues attempt 2 failed: overpass.openstreetmap.fr: timed out after 12s
+83/429 Mumbai / football: FAILED
+overpass/venues attempt 1 failed: overpass-api.de: timed out after 12s
+overpass/venues attempt 2 failed: overpass.kumi.systems: timed out after 12s
+84/429 Mumbai / tennis: FAILED
+overpass/venues attempt 1 failed: overpass.private.coffee: timed out after 12s
+overpass/venues attempt 2 failed: overpass.openstreetmap.fr: timed out after 12s
+85/429 Mumbai / hiking: FAILED
+overpass/venues attempt 1 failed: overpass-api.de: timed out after 12s
+overpass/venues attempt 2 failed: overpass.kumi.systems: timed out after 12s
+86/429 Mumbai / picnic: FAILED
+overpass/venues attempt 1 failed: overpass.private.coffee: timed out after 12s
+overpass/context attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/context attempt 2 failed: overpass-api.de: timed out after 12s
+87/429 Mumbai / event: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+88/429 Mumbai / photography: FAILED
+overpass/context attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/context attempt 2 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/context attempt 3 failed: overpass.kumi.systems: timed out after 12s
+89/429 Delhi / running: FAILED
+overpass/venues attempt 1 failed: overpass.private.coffee: timed out after 12s
+overpass/context attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/context attempt 2 failed: overpass-api.de: timed out after 12s
+90/429 Delhi / walking: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+91/429 Delhi / cycling: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: timed out after 12s
+92/429 Delhi / golf: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+93/429 Delhi / cricket: FAILED
+94/429 Delhi / football: ok
+95/429 Delhi / tennis: ok
+96/429 Delhi / hiking: ok
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: timed out after 12s
+97/429 Delhi / picnic: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+98/429 Delhi / event: FAILED
+99/429 Delhi / photography: ok
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: timed out after 12s
+100/429 Bengaluru / running: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+101/429 Bengaluru / walking: FAILED
+102/429 Bengaluru / cycling: ok
+103/429 Bengaluru / golf: ok
+104/429 Bengaluru / cricket: ok
+overpass/context attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/context attempt 2 failed: overpass-api.de: timed out after 12s
+105/429 Bengaluru / football: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+106/429 Bengaluru / tennis: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: timed out after 12s
+107/429 Bengaluru / hiking: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+108/429 Bengaluru / picnic: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/venues attempt 3 failed: overpass.kumi.systems: timed out after 12s
+109/429 Bengaluru / event: FAILED
+overpass/venues attempt 1 failed: overpass.private.coffee: timed out after 12s
+overpass/venues attempt 2 failed: overpass.openstreetmap.fr: timed out after 12s
+110/429 Bengaluru / photography: FAILED
+overpass/venues attempt 1 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/venues attempt 2 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 3 failed: overpass.private.coffee: timed out after 12s
+111/429 Chennai / running: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/venues attempt 3 failed: overpass.kumi.systems: timed out after 12s
+112/429 Chennai / walking: FAILED
+overpass/venues attempt 1 failed: overpass.private.coffee: timed out after 12s
+overpass/venues attempt 2 failed: overpass.openstreetmap.fr: timed out after 12s
+113/429 Chennai / cycling: FAILED
+overpass/venues attempt 1 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/venues attempt 2 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 3 failed: overpass.private.coffee: timed out after 12s
+114/429 Chennai / golf: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/venues attempt 3 failed: overpass.kumi.systems: timed out after 12s
+115/429 Chennai / cricket: FAILED
+overpass/venues attempt 1 failed: overpass.private.coffee: timed out after 12s
+overpass/venues attempt 2 failed: overpass.openstreetmap.fr: timed out after 12s
+116/429 Chennai / football: FAILED
+overpass/venues attempt 1 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/venues attempt 2 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 3 failed: overpass.private.coffee: timed out after 12s
+117/429 Chennai / tennis: FAILED
+overpass/context attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/context attempt 2 failed: overpass-api.de: timed out after 12s
+118/429 Chennai / hiking: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+119/429 Chennai / picnic: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: timed out after 12s
+120/429 Chennai / event: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+121/429 Chennai / photography: FAILED
+overpass/context attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/context attempt 2 failed: overpass-api.de: timed out after 12s
+122/429 Hyderabad / running: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+123/429 Hyderabad / walking: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: timed out after 12s
+124/429 Hyderabad / cycling: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+125/429 Hyderabad / golf: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/venues attempt 3 failed: overpass.kumi.systems: timed out after 12s
+126/429 Hyderabad / cricket: FAILED
+overpass/venues attempt 1 failed: overpass.private.coffee: timed out after 12s
+127/429 Hyderabad / football: ok
+128/429 Hyderabad / tennis: ok
+129/429 Hyderabad / hiking: ok
+130/429 Hyderabad / picnic: ok
+overpass/context attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/context attempt 2 failed: overpass-api.de: timed out after 12s
+131/429 Hyderabad / event: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+132/429 Hyderabad / photography: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/venues attempt 3 failed: overpass.kumi.systems: timed out after 12s
+133/429 Kolkata / running: FAILED
+overpass/venues attempt 1 failed: overpass.private.coffee: timed out after 12s
+134/429 Kolkata / walking: ok
+135/429 Kolkata / cycling: ok
+136/429 Kolkata / golf: ok
+137/429 Kolkata / cricket: ok
+overpass/context attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/context attempt 2 failed: overpass-api.de: timed out after 12s
+138/429 Kolkata / football: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+139/429 Kolkata / tennis: FAILED
+140/429 Kolkata / hiking: ok
+141/429 Kolkata / picnic: ok
+142/429 Kolkata / event: ok
+overpass/context attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/context attempt 2 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/context attempt 3 failed: overpass.kumi.systems: timed out after 12s
+143/429 Kolkata / photography: FAILED
+overpass/venues attempt 1 failed: overpass.private.coffee: timed out after 12s
+overpass/venues attempt 2 failed: overpass.openstreetmap.fr: timed out after 12s
+144/429 Pune / running: FAILED
+overpass/venues attempt 1 failed: overpass-api.de: timed out after 12s
+overpass/venues attempt 2 failed: overpass.kumi.systems: timed out after 12s
+145/429 Pune / walking: FAILED
+overpass/venues attempt 1 failed: overpass.private.coffee: timed out after 12s
+146/429 Pune / cycling: ok
+147/429 Pune / golf: ok
+overpass/context attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/context attempt 2 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/context attempt 3 failed: overpass.kumi.systems: timed out after 12s
+148/429 Pune / cricket: FAILED
+overpass/venues attempt 1 failed: overpass.private.coffee: timed out after 12s
+overpass/venues attempt 2 failed: overpass.openstreetmap.fr: timed out after 12s
+149/429 Pune / football: FAILED
+overpass/venues attempt 1 failed: overpass-api.de: timed out after 12s
+overpass/venues attempt 2 failed: overpass.kumi.systems: timed out after 12s
+150/429 Pune / tennis: FAILED
+overpass/venues attempt 1 failed: overpass.private.coffee: timed out after 12s
+overpass/venues attempt 2 failed: overpass.openstreetmap.fr: timed out after 12s
+151/429 Pune / hiking: FAILED
+overpass/venues attempt 1 failed: overpass-api.de: timed out after 12s
+overpass/venues attempt 2 failed: overpass.kumi.systems: timed out after 12s
+152/429 Pune / picnic: FAILED
+overpass/venues attempt 1 failed: overpass.private.coffee: timed out after 12s
+overpass/venues attempt 2 failed: overpass.openstreetmap.fr: timed out after 12s
+153/429 Pune / event: FAILED
+overpass/venues attempt 1 failed: overpass-api.de: HTTP 502 # 502 Gateway Timeout  This Overpass API server is currently at capacity. All query workers are busy and the request queue is full.  ## What to do  Retry your request using exponential backoff: wait a short interval, then retry. If the request fails again, double the wait time and retry again.  ## F
+overpass/venues attempt 2 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 3 failed: overpass.private.coffee: timed out after 12s
+154/429 Pune / photography: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: timed out after 12s
+155/429 Ahmedabad / running: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+156/429 Ahmedabad / walking: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: timed out after 12s
+157/429 Ahmedabad / cycling: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+158/429 Ahmedabad / golf: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: timed out after 12s
+159/429 Ahmedabad / cricket: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+160/429 Ahmedabad / football: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s
+overpass/venues attempt 2 failed: overpass-api.de: timed out after 12s
+161/429 Ahmedabad / tennis: FAILED
+overpass/venues attempt 1 failed: overpass.kumi.systems: timed out after 12s
+overpass/venues attempt 2 failed: overpass.private.coffee: timed out after 12s
+162/429 Ahmedabad / hiking: FAILED
+overpass/venues attempt 1 failed: overpass.openstreetmap.fr: timed out after 12s

@@ -76,12 +76,14 @@ async def request(
     timeout_s: float = cfg.DEFAULT_TIMEOUT_S,
     deadline_s: float | None = None,
     reject: Callable[[httpx.Response], str | None] | None = None,
+    on_attempt: Callable[[str, bool], None] | None = None,
 ) -> tuple[httpx.Response | None, DegradedSource | None]:
     """Send a request; attempt i uses urls[i % len(urls)] (mirror rotation).
 
     `timeout_s` is per attempt, `deadline_s` caps the whole retry loop. `reject` inspects a
     200 response and returns a problem description to make it a retryable failure (Overpass
-    reports server-side timeouts inside a 200 body).
+    reports server-side timeouts inside a 200 body). `on_attempt(url, ok)` is called after every
+    attempt (circuit breakers).
     """
     candidates = [urls] if isinstance(urls, str) else list(urls)
     deadline = time.monotonic() + (
@@ -114,6 +116,8 @@ async def request(
         else:
             problem = reject(resp) if reject and resp.status_code == 200 else None
             if resp.status_code == 200 and problem is None:
+                if on_attempt:
+                    on_attempt(url, True)
                 return resp, None
             if problem is not None:
                 reason, detail = "http", f"{host}: {problem}"
@@ -125,6 +129,8 @@ async def request(
                     break
                 retry_after = resp.headers.get("Retry-After")
 
+        if on_attempt:
+            on_attempt(url, False)
         log.warning("%s/%s attempt %d failed: %s", source.value, stage, attempt + 1, detail)
         pause = _backoff_s(attempt, retry_after)
         if attempt + 1 < cfg.RETRIES and deadline - time.monotonic() > pause + 0.5:

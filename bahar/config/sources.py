@@ -21,11 +21,14 @@ HOST_MIN_INTERVAL_S: Final[dict[str, float]] = {
 }
 
 # Bump when a fetcher's parsing / selection changes so stale cached results are not reused.
-CACHE_VERSION: Final = 7
+CACHE_VERSION: Final = 8
 
 # ---- cache TTLs (CLAUDE.md: live <= 15 min, static geography <= 7 days)
 LIVE_TTL_S: Final = 15 * 60
 STATIC_TTL_S: Final = 7 * 24 * 3600
+# Stale-if-error for OSM geography: entries are kept this long and served (with an assumption)
+# when a live Overpass fetch fails.
+STALE_TTL_S: Final = 30 * 24 * 3600
 
 # ---- Nominatim
 NOMINATIM_URL: Final = "https://nominatim.openstreetmap.org/search"
@@ -45,9 +48,21 @@ GEOCODE_DISTINCT_KM: Final = 5.0
 # name matches the query's place word below GEOCODE_NAME_MATCH (difflib ratio), retry with
 # single-substitution vowel variants, at most GEOCODE_MAX_VARIANTS requests (1 req/s each).
 GEOCODE_NAME_MATCH: Final = 0.8
-GEOCODE_MAX_VARIANTS: Final = 3
+GEOCODE_MAX_VARIANTS: Final = 5
 GEOCODE_VOWEL_SWAPS: Final = (
     ("e", "a"), ("a", "e"), ("ee", "i"), ("i", "ee"), ("oo", "u"), ("u", "oo"),
+)  # fmt: skip
+# City names users write both ways; either spelling may be the one OSM indexes.
+GEOCODE_ALIASES: Final = {
+    "gurgaon": "Gurugram", "gurugram": "Gurgaon", "bangalore": "Bengaluru", "bengaluru": "Bangalore",
+    "bombay": "Mumbai", "poona": "Pune", "mysore": "Mysuru", "mysuru": "Mysore",
+}  # fmt: skip
+# Geocode ladder, step (b): trailing words that name a kind of landmark, dropped when the full
+# name is not found ("Pandavleni caves" -> "Pandavleni").
+GEOCODE_LANDMARK_WORDS: Final = (
+    "national park", "race course", "racecourse", "caves", "cave", "fort", "beach", "lake",
+    "park", "garden", "gardens", "temple", "hills", "hill", "dam", "stadium", "ground", "trek",
+    "point", "riverfront", "ghat", "ghats",
 )  # fmt: skip
 # A Devanagari geocode is accepted only when its name agrees with the parser's Latin spelling
 # at least this much (difflib ratio, or containment): a truncated copy can match elsewhere.
@@ -64,9 +79,15 @@ OVERPASS_MIRRORS: Final = (
     "https://overpass.kumi.systems/api/interpreter",
     "https://overpass.private.coffee/api/interpreter",
 )
+OVERPASS_BAD_MIRROR_S: Final = 90.0  # circuit breaker: a failed mirror is skipped this long
+OVERPASS_MAX_CONCURRENT: Final = 2  # Overpass requests in flight, process-wide
 OVERPASS_SERVER_TIMEOUT_S: Final = 25  # [timeout:N] ceiling from CLAUDE.md
 VENUE_ATTEMPT_TIMEOUT_S: Final = 12.0
-VENUE_DEADLINE_S: Final = 25.0
+VENUE_DEADLINE_S: Final = 25.0  # whole venue query incl. the retry below
+VENUE_RETRY_PAUSE_S: Final = 2.0  # one retry on the best mirror after a failed venue query
+# Fallback when Overpass fails: Nominatim text search inside the radius' bounding box.
+NOMINATIM_VENUE_LIMIT: Final = 10  # results per keyword
+NOMINATIM_VENUE_KEYWORDS_MAX: Final = 3  # keywords tried (1 req/s each)
 # The context query is the biggest threat to pillar 1 (no context -> E = 0 -> venues stop
 # differing). Measured Oct 2026: overpass.openstreetmap.fr answers a 12-venue Mumbai query in
 # ~8 s while the other mirrors time out at 40 s. So: 12 s on the last-good mirror, then one
@@ -149,6 +170,7 @@ OPENTOPODATA_MAX_POINTS: Final = 100
 SOURCE_NAMES: Final[dict[str, str]] = {
     "nominatim": "Nominatim geocoding (© OpenStreetMap contributors)",
     "overpass": "OpenStreetMap via Overpass API (© OpenStreetMap contributors)",
+    "osm_extract": "OpenStreetMap (Geofabrik extract)",
     "open_meteo_forecast": "Open-Meteo Forecast API (open-meteo.com)",
     "open_meteo_air_quality": "Open-Meteo Air Quality API, CAMS (Copernicus)",
     "waqi": "World Air Quality Index project (aqicn.org)",

@@ -1,0 +1,80 @@
+{"id": 1, "query": "asthma hai, kal subah Lonavala ke paas walk kahan karu?", "expected_city": "Pune", "expect": "answer", "tags": ["hinglish", "health", "time"]}
+{"id": 2, "query": "best place for a morning run in Koregaon Park this Sunday", "expected_city": "Pune", "expect": "answer", "tags": []}
+{"id": 3, "query": "Bandra Bandstand evening walk tomorrow", "expected_city": "Mumbai", "expect": "answer", "tags": ["bare"]}
+{"id": 4, "query": "cycling Sanjay Gandhi National Park weekend", "expected_city": "Mumbai", "expect": "answer", "tags": ["bare"]}
+{"id": 5, "query": "Kolhapur me kal shaam ko cricket khelna hai, kaunsa ground sahi rahega", "expected_city": "Kolhapur", "expect": "answer", "tags": ["hinglish", "small_city"]}
+{"id": 6, "query": "football turf near Indiranagar tonight", "expected_city": "Bengaluru", "expect": "answer", "tags": []}
+{"id": 7, "query": "Cubbon Park photography golden hour tomorrow", "expected_city": "Bengaluru", "expect": "answer", "tags": ["bare"]}
+{"id": 8, "query": "running Lodhi Garden early morning", "expected_city": "Delhi", "expect": "answer", "tags": ["bare"]}
+{"id": 9, "query": "picnic with kids near Hauz Khas this weekend", "expected_city": "Delhi", "expect": "answer", "tags": ["health"]}
+{"id": 10, "query": "Marina Beach walk kal subah", "expected_city": "Chennai", "expect": "answer", "tags": ["hinglish", "bare"]}
+{"id": 11, "query": "tennis courts near Banjara Hills evening", "expected_city": "Hyderabad", "expect": "answer", "tags": []}
+{"id": 12, "query": "Hussain Sagar jogging kal", "expected_city": "Hyderabad", "expect": "answer", "tags": ["hinglish", "bare"]}
+{"id": 13, "query": "Rabindra Sarobar morning walk, I am 68 years old", "expected_city": "Kolkata", "expect": "answer", "tags": ["health", "senior"]}
+{"id": 14, "query": "Ahmedabad Sabarmati riverfront cycling sunday morning", "expected_city": "Ahmedabad", "expect": "answer", "tags": ["bare"]}
+{"id": 15, "query": "Jaipur me Nahargarh hiking kab karna theek rahega", "expected_city": "Jaipur", "expect": "answer", "tags": ["hinglish", "vague_time"]}
+{"id": 16, "query": "Gomti Nagar park me evening walk kaise rahega, mujhe heart ki problem hai", "expected_city": "Lucknow", "expect": "answer", "tags": ["hinglish", "health"]}
+{"id": 17, "query": "Nashik Pandavleni caves trek this weekend", "expected_city": "Nashik", "expect": "answer", "tags": ["bare"]}
+{"id": 18, "query": "म्हैसूर मध्ये उद्या सकाळी चालायला कुठे जाऊ", "expected_city": "Mysuru", "expect": "answer", "tags": ["marathi", "native"]}
+{"id": 19, "query": "Chamundi Hills hiking early morning tomorrow", "expected_city": "Mysuru", "expect": "answer", "tags": []}
+{"id": 20, "query": "Indore Rajwada ke paas shaam ko photography", "expected_city": "Indore", "expect": "answer", "tags": ["hinglish"]}
+{"id": 21, "query": "Dehradun Rajpur road cycling morning", "expected_city": "Dehradun", "expect": "answer", "tags": ["bare"]}
+{"id": 22, "query": "shimla ridge walk tomorrow afternoon", "expected_city": "Shimla", "expect": "answer", "tags": []}
+{"id": 23, "query": "Udaipur Fateh Sagar sunset photos tonight", "expected_city": "Udaipur", "expect": "answer", "tags": ["bare"]}
+{"id": 24, "query": "Nagpur Futala lake evening walk", "expected_city": "Nagpur", "expect": "answer", "tags": ["bare"]}
+{"id": 25, "query": "Sukhna Lake Chandigarh running at sunrise", "expected_city": "Chandigarh", "expect": "answer", "tags": []}
+{"id": 26, "query": "Kochi Marine Drive walk after work", "expected_city": "Kochi", "expect": "answer", "tags": ["vague_time"]}
+{"id": 27, "query": "गुड़गांव में कल सुबह दौड़ने के लिए सबसे अच्छी जगह", "expected_city": "Gurugram", "expect": "answer", "tags": ["hindi", "native"]}
+{"id": 28, "query": "पुणे में रविवारी सायकलिंगसाठी चांगली जागा सांगा", "expected_city": "Pune", "expect": "answer", "tags": ["marathi", "native"]}
+{"id": 29, "query": "दिल्ली में इस वीकेंड पिकनिक कहाँ करें", "expected_city": "Delhi", "expect": "answer", "tags": ["hindi", "native"]}
+{"id": 30, "query": "मुंबई मध्ये आज संध्याकाळी फुटबॉल खेळायला जागा", "expected_city": "Mumbai", "expect": "answer", "tags": ["marathi", "native"]}
+{"id": 31, "query": "Powia lake walk tomorrow morning", "expected_city": "Mumbai", "expect": "answer", "tags": ["typo"]}
+{"id": 32, "query": "running near Bangalor Lalbagh", "expected_city": "Bengaluru", "expect": "answer", "tags": ["typo"]}
+{"id": 33, "query": "cricket ground Hydrabad Gachibowli saturday", "expected_city": "Hyderabad", "expect": "answer", "tags": ["typo"]}
+{"id": 34, "query": "evening walk Kolhapr Rankala", "expected_city": "Kolhapur", "expect": "answer", "tags": ["typo"]}
+{"id": 35, "query": "picnic spot near Pune Sinhgad fort sunday", "expected_city": "Pune", "expect": "answer", "tags": ["typo"]}
+{"id": 36, "query": "golf near Gurgaon tomorrow morning", "expected_city": "Gurugram", "expect": "answer", "tags": []}
+{"id": 37, "query": "golf Pune this weekend", "expected_city": "Pune", "expect": "answer", "tags": ["bare"]}
+{"id": 38, "query": "golf course Bengaluru Bangalore Golf Club saturday morning", "expected_city": "Bengaluru", "expect": "answer", "tags": []}
+{"id": 39, "query": "tennis Mumbai Juhu kal subah", "expected_city": "Mumbai", "expect": "answer", "tags": ["hinglish"]}
+{"id": 40, "query": "tennis tomorrow evening Chennai Adyar", "expected_city": "Chennai", "expect": "answer", "tags": []}
+{"id": 41, "query": "football Salt Lake Kolkata sunday evening", "expected_city": "Kolkata", "expect": "answer", "tags": ["bare"]}
+{"id": 42, "query": "hiking Matheran tomorrow", "expected_city": "Mumbai", "expect": "answer", "tags": ["vague_time"]}
+{"id": 43, "query": "Rajmachi trek is it ok this weekend with asthma", "expected_city": "Pune", "expect": "answer", "tags": ["health"]}
+{"id": 44, "query": "Sinhagad pe sunrise trek karna hai, kal ka mausam kaisa rahega", "expected_city": "Pune", "expect": "answer", "tags": ["hinglish"]}
+{"id": 45, "query": "Sanjay Van Delhi cycling morning", "expected_city": "Delhi", "expect": "answer", "tags": ["bare"]}
+{"id": 46, "query": "event setup outdoor concert Mahalaxmi Race Course next saturday", "expected_city": "Mumbai", "expect": "answer", "tags": ["event"]}
+{"id": 47, "query": "outdoor wedding reception lawn Jaipur next week", "expected_city": "Jaipur", "expect": "answer", "tags": ["event", "vague_time"]}
+{"id": 48, "query": "kids birthday party in a park Hyderabad sunday evening", "expected_city": "Hyderabad", "expect": "answer", "tags": ["event", "health"]}
+{"id": 49, "query": "photography at Gateway of India sunrise", "expected_city": "Mumbai", "expect": "answer", "tags": []}
+{"id": 50, "query": "taj mahal sunrise photography Agra tomorrow", "expected_city": "Agra", "expect": "answer", "tags": []}
+{"id": 51, "query": "Varanasi ghats photography tomorrow morning", "expected_city": "Varanasi", "expect": "answer", "tags": ["bare"]}
+{"id": 52, "query": "I am pregnant, can I walk in the evening near Aundh Pune", "expected_city": "Pune", "expect": "answer", "tags": ["health"]}
+{"id": 53, "query": "my son is 9, cricket practice Thane tomorrow 5pm", "expected_city": "Thane", "expect": "answer", "tags": ["health"]}
+{"id": 54, "query": "COPD, need a gentle walk Saket Delhi morning", "expected_city": "Delhi", "expect": "answer", "tags": ["health"]}
+{"id": 55, "query": "running 10km Mumbai Marine Drive 6am tomorrow", "expected_city": "Mumbai", "expect": "answer", "tags": []}
+{"id": 56, "query": "walking sometime this week Pune Pashan lake", "expected_city": "Pune", "expect": "answer", "tags": ["vague_time"]}
+{"id": 57, "query": "cycle ride Bhopal Upper Lake whenever the air is best", "expected_city": "Bhopal", "expect": "answer", "tags": ["vague_time"]}
+{"id": 58, "query": "Surat Dumas beach evening walk", "expected_city": "Surat", "expect": "answer", "tags": ["bare"]}
+{"id": 59, "query": "Thiruvananthapuram Kovalam sunrise run", "expected_city": "Thiruvananthapuram", "expect": "answer", "tags": ["bare"]}
+{"id": 60, "query": "Guwahati Deepor Beel photography this weekend", "expected_city": "Guwahati", "expect": "answer", "tags": ["bare"]}
+{"id": 61, "query": "Goa Panaji Miramar beach walk kal shaam", "expected_city": "Panaji", "expect": "answer", "tags": ["hinglish", "bare"]}
+{"id": 62, "query": "Amritsar Golden Temple area morning walk", "expected_city": "Amritsar", "expect": "answer", "tags": ["bare"]}
+{"id": 63, "query": "cycling in Pune", "expected_city": "Pune", "expect": "answer", "tags": ["vague_time"]}
+{"id": 64, "query": "kal kahan run karu", "expected_city": null, "expect": "needs_clarification", "tags": ["hinglish", "missing_location"]}
+{"id": 65, "query": "best time for a walk?", "expected_city": null, "expect": "needs_clarification", "tags": ["missing_location"]}
+{"id": 66, "query": "मुझे पार्क में टहलना है", "expected_city": null, "expect": "needs_clarification", "tags": ["hindi", "missing_location"]}
+{"id": 67, "query": "cycling from Andheri to BKC tomorrow 9am", "expected_city": "Mumbai", "expect": "answer", "tags": ["commute"]}
+{"id": 68, "query": "office jaana hai Koramangala se Whitefield cycle se kal subah", "expected_city": "Bengaluru", "expect": "answer", "tags": ["commute", "hinglish"]}
+{"id": 69, "query": "cycle commute from Kothrud", "expected_city": null, "expect": "needs_clarification", "tags": ["commute", "missing_location"]}
+{"id": 70, "query": "bike to work Connaught Place to Noida morning", "expected_city": "Delhi", "expect": "answer", "tags": ["commute"]}
+{"id": 71, "query": "can you book me a flight to Goa", "expected_city": null, "expect": "out_of_scope", "tags": ["out_of_scope"]}
+{"id": 72, "query": "what is the capital of France", "expected_city": null, "expect": "out_of_scope", "tags": ["out_of_scope"]}
+{"id": 73, "query": "swimming pool near Andheri tomorrow", "expected_city": null, "expect": "out_of_scope", "tags": ["out_of_scope"]}
+{"id": 74, "query": "scuba diving in Goa this weekend", "expected_city": null, "expect": "out_of_scope", "tags": ["out_of_scope"]}
+{"id": 75, "query": "yoga in a park Pune morning", "expected_city": "Pune", "expect": "answer", "tags": ["activity_fuzzy"]}
+{"id": 76, "query": "jogging Mulund tomorrow 6 am", "expected_city": "Mumbai", "expect": "answer", "tags": ["bare", "synonym"]}
+{"id": 77, "query": "trekking near Lonavala sat", "expected_city": "Pune", "expect": "answer", "tags": ["synonym"]}
+{"id": 78, "query": "kal baarish hogi kya, Navi Mumbai me cricket", "expected_city": "Navi Mumbai", "expect": "answer", "tags": ["hinglish"]}
+{"id": 79, "query": "is the air bad for a run in Gurugram DLF Phase 3 right now", "expected_city": "Gurugram", "expect": "answer", "tags": ["time_now"]}
+{"id": 80, "query": "Noida Sector 62 evening football", "expected_city": "Noida", "expect": "answer", "tags": ["bare"]}

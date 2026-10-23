@@ -21,3 +21,4 @@ class Fetch(BaseModel, Generic[T]):
     evidence: list[Evidence] = []
     elapsed_ms: int = 0
     cached: bool = False
+    stale_days: int | None = None  # served from a cache entry older than its fresh TTL (live fetch failed)

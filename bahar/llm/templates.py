@@ -93,6 +93,13 @@ NO_FORECAST: Final[dict[Lang, str]] = {
     Lang.mr: "सध्या हवामानाचा अंदाज मिळत नाही, त्यामुळे सुरक्षित वेळ सांगता येत नाही. थोड्या "
     "वेळाने पुन्हा प्रयत्न करा.",
 }
+MAP_DATA_BUSY: Final[dict[Lang, str]] = {
+    Lang.en: "The map data service is busy, please retry in a minute.",
+    Lang.hinglish: "Map data service abhi busy hai, ek minute baad dobara try karein.",
+    Lang.hi: "मैप डेटा सेवा अभी व्यस्त है, कृपया एक मिनट बाद दोबारा कोशिश करें।",
+    Lang.mr: "मॅप डेटा सेवा सध्या व्यस्त आहे, कृपया एका मिनिटाने पुन्हा प्रयत्न करा.",
+}
+
 INTERNAL_ERROR: Final[dict[Lang, str]] = {
     Lang.en: "Sorry, something went wrong while checking this. Please try again.",
     Lang.hinglish: "Sorry, check karte waqt kuch gadbad ho gayi. Dobara try kariye.",
@@ -130,6 +137,12 @@ TEMPLATE_LANG: Final[dict[Lang, Lang]] = {
 # Key: code ("!" suffix = hard gate, "carry:" / "watch:" = advice). Each value lists phrasings
 # in order of preference; the first whose {placeholders} are all available is used.
 # {word} is the code-chosen qualitative word; other placeholders are evidence refs.
+
+# Why-not line for a close call: the venue is nearly as good (no numbers, no label).
+CLOSE_CALL: Final[dict[Lang, str]] = {
+    Lang.en: "{venue} is nearly as good", Lang.hinglish: "{venue} bhi lagbhag utna hi achha hai",
+    Lang.hi: "{venue} भी लगभग उतना ही अच्छा है", Lang.mr: "{venue} is nearly as good",
+}  # fmt: skip
 
 _EN: Final[dict[str, tuple[str, ...]]] = {
     "air_quality!": ("fine dust {value}, {category}, above your limit of {limit}",
@@ -284,6 +297,10 @@ def phrases(items: list[FactItem], lang: Lang, kind: str = "") -> list[str]:
     return [p for it in items if (p := phrase(it, lang, kind))]
 
 
+def is_close_call(slot: SlotFacts) -> bool:
+    return any(it.code == "close_call" for it in slot.reasons)
+
+
 def when(slot: SlotFacts) -> str:
     return f"{{{{{slot.when}}}}}"
 
@@ -351,7 +368,9 @@ def tail_lines(sheet: FactSheet, lang: Lang) -> list[str]:
         options.append(f"{place}, {when(s)}" + (f" — {reason[0]}" if reason else ""))
     if options:
         out.append(f"**{lb['other']}:** " + f"; {lb['or']} ".join(options) + ".")
-    if sheet.why_not and (reason := phrases(sheet.why_not.reasons, lang)):
+    if sheet.why_not and is_close_call(sheet.why_not):
+        out.append(CLOSE_CALL[sheet.lang].format(venue=f"{{{{{sheet.why_not.venue}}}}}") + ".")
+    elif sheet.why_not and (reason := phrases(sheet.why_not.reasons, lang)):
         out.append(f"**{lb['why_not'].format(venue='{{' + sheet.why_not.venue + '}}')}:** {reason[0]}.")
     return out
 
@@ -382,7 +401,9 @@ def facts_block(sheet: FactSheet) -> str:
             lines.append(f"{title}: " + "; ".join(ps))
     if avoid := [p for it in sheet.avoid if (p := avoid_phrase(it, en))]:
         lines.append("Avoid: " + "; ".join(avoid))
-    if sheet.why_not and (reason := phrases(sheet.why_not.reasons, en)):
+    if sheet.why_not and is_close_call(sheet.why_not):
+        lines.append(f"Close call: {{{{{sheet.why_not.venue}}}}} ({sheet.why_not.kind}) is nearly as good as the pick")
+    elif sheet.why_not and (reason := phrases(sheet.why_not.reasons, en)):
         lines.append(f"Why not {{{{{sheet.why_not.venue}}}}} ({sheet.why_not.kind}): {reason[0]}")
     return "\n".join(lines)
 

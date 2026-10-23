@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from difflib import SequenceMatcher
 from typing import Any
 
+from bahar.config import lexicon as lx
 from bahar.config import sources as cfg
 from bahar.data import cache
 from bahar.data.http import degraded, request_json
@@ -28,13 +29,22 @@ async def geocode(text: str) -> Fetch[Place]:
     return await cache.cached(key, cache.STATIC, lambda: _fetch(text))
 
 
-async def _search(text: str) -> tuple[list[dict[str, Any]], DegradedSource | None]:
+async def search_nominatim(
+    text: str, *, limit: int = cfg.GEOCODE_CANDIDATES,
+    viewbox: tuple[float, float, float, float] | None = None, bounded: bool = False,
+) -> tuple[list[dict[str, Any]], DegradedSource | None]:
+    """One Nominatim search in India; `viewbox` is (west, north, east, south)."""
+    params: dict[str, Any] = {"q": text, "format": "jsonv2", "countrycodes": "in", "limit": limit}
+    if viewbox:
+        params |= {"viewbox": ",".join(f"{v:.5f}" for v in viewbox), "bounded": int(bounded)}
     data, failure = await request_json(
-        SourceKey.nominatim, "geocode", IMPACT, "GET", cfg.NOMINATIM_URL,
-        params={"q": text, "format": "jsonv2", "countrycodes": "in",
-                "limit": cfg.GEOCODE_CANDIDATES},
-    )  # fmt: skip
+        SourceKey.nominatim, "geocode", IMPACT, "GET", cfg.NOMINATIM_URL, params=params
+    )
     return sorted(data or [], key=_rank, reverse=True), failure
+
+
+async def _search(text: str) -> tuple[list[dict[str, Any]], DegradedSource | None]:
+    return await search_nominatim(text)
 
 
 async def _fetch(text: str) -> Fetch[Place]:
@@ -43,15 +53,19 @@ async def _fetch(text: str) -> Fetch[Place]:
         return Fetch(degraded=[failure])
     token = text.split(",")[0].strip()
     notes: list[str] = []
-    if not ranked or _name_match(token, ranked[0]) < cfg.GEOCODE_NAME_MATCH:
-        for variant in _vowel_variants(token)[: cfg.GEOCODE_MAX_VARIANTS]:
+    if _weak(token, ranked):
+        for variant in _spelling_variants(token)[: cfg.GEOCODE_MAX_VARIANTS]:
             alt, alt_failure = await _search(text.replace(token, variant, 1))
             if alt_failure or not alt:
                 continue
             if not ranked or _name_match(token, alt[0]) > _name_match(token, ranked[0]):
                 ranked, notes = alt, [f"searched '{token}' as '{variant}' (spelling variant)"]
-            if _name_match(token, ranked[0]) >= cfg.GEOCODE_NAME_MATCH:
+            if not _weak(token, ranked):
                 break
+    if _weak(token, ranked):
+        rungs, notes_ladder = await _ladder(text)
+        if rungs:
+            ranked, notes = rungs, notes_ladder
     if not ranked:
         empty = degraded(
             SourceKey.nominatim, "geocode", "empty", f"no match for {text!r} in India", IMPACT
@@ -81,6 +95,54 @@ async def _fetch(text: str) -> Fetch[Place]:
     return Fetch(value=place, evidence=[evidence])
 
 
+def _weak(token: str, ranked: list[dict[str, Any]]) -> bool:
+    return not ranked or _name_match(token, ranked[0]) < cfg.GEOCODE_NAME_MATCH
+
+
+def _city_of(text: str) -> tuple[str, str] | None:
+    """(place head, city) from "head, City", "head City" or "City head"; None if no city."""
+    pieces = [p.strip() for p in text.split(",") if p.strip()]
+    if len(pieces) > 1:
+        return ", ".join(pieces[:-1]), pieces[-1]
+    if m := lx.CITY.search(text):
+        head = f"{text[: m.start()]} {text[m.end() :]}".strip()
+        return (head, lx.CITIES[m.group().lower()]) if head else None
+    words = text.split()
+    return (" ".join(words[1:]), words[0]) if len(words) > 1 else None
+
+
+async def _ladder(text: str) -> tuple[list[dict[str, Any]], list[str]]:
+    """The full text found nothing usable: (a) the place + its city, (b) the place without
+    trailing landmark words, (c) the city alone. Returns the first rung that works with an
+    assumption saying what was used."""
+    split = _city_of(text)
+    if split is None:
+        return [], []
+    head, city = split
+    stripped = _strip_landmark(head)
+    rungs = [(f"{head}, {city}", head, f"located '{head}' via {city}")]
+    if stripped != head:
+        rungs.append((f"{stripped}, {city}", stripped, f"centred on {stripped}; {head} not found"))
+    rungs.append((city, city, f"centred on {city}; {head} not found"))
+    tried = {" ".join(text.lower().replace(",", " ").split())}
+    for query, name, note in rungs:
+        key = " ".join(query.lower().replace(",", " ").split())
+        if key in tried:
+            continue
+        tried.add(key)
+        hits, failure = await _search(query)
+        if not failure and hits and _name_match(name, hits[0]) >= cfg.GEOCODE_NAME_MATCH:
+            return hits, [note]
+    return [], []
+
+
+def _strip_landmark(head: str) -> str:
+    out = head
+    for word in cfg.GEOCODE_LANDMARK_WORDS:
+        out = re.sub(rf"\s+{re.escape(word)}$", "", out, flags=re.I)
+    return out.strip() or head
+
+
 def agrees(place: Place, latin: str) -> bool:
     """Does a result found by its Devanagari name match the parser's Latin spelling?"""
     hit = {"display_name": place.name}
@@ -93,6 +155,26 @@ def _name_match(token: str, hit: dict[str, Any]) -> float:
     name = (hit.get("name") or hit["display_name"].split(", ")[0]).casefold()
     token = token.casefold()
     return 1.0 if token in name else SequenceMatcher(None, token, name).ratio()
+
+
+def _spelling_variants(token: str) -> list[str]:
+    """Alias spelling first (Gurgaon <-> Gurugram), then swapped vowel pairs ("Powia" ->
+    "Powai"), vowel substitutions (Hinjewadi / Hinjawadi), other adjacent-letter swaps."""
+    chars = list(token)
+    pairs = [(i, sum(c.lower() in "aeiou" for c in chars[i : i + 2])) for i in range(len(chars) - 1)
+             if chars[i].isalpha() and chars[i + 1].isalpha() and chars[i].lower() != chars[i + 1].lower()]  # fmt: skip
+
+    def swap(i: int) -> str:
+        t = chars.copy()
+        t[i], t[i + 1] = t[i + 1], t[i]
+        return "".join(t)
+
+    alias = cfg.GEOCODE_ALIASES.get(token.lower())
+    out = [alias] if alias else []
+    out += [swap(i) for i, v in pairs if v == 2]
+    out += _vowel_variants(token)
+    out += [swap(i) for i, v in pairs if v < 2]
+    return list(dict.fromkeys(v for v in out if v.lower() != token.lower()))
 
 
 def _vowel_variants(token: str) -> list[str]:

@@ -212,7 +212,9 @@ def build_facts(inp: EngineInput, res: EngineResult, *, include_hourly_ids: bool
     why_not = None
     if rec.why_not:
         wn = rec.why_not
-        why_not = b.slot(wn.slot, [_versus(_factor_item(wn.decisive, wn.slot, store), rec.best, store)])
+        reason = (FactItem(code="close_call") if wn.close
+                  else _versus(_factor_item(wn.decisive, wn.slot, store), rec.best, store))
+        why_not = b.slot(wn.slot, [reason])
     sheet = FactSheet(
         lang=inp.parsed.lang, activity=inp.activity,
         profile=[] if health.key == "default" else health.key.split("+"),

@@ -16,6 +16,7 @@ from bahar.config.activities import ACTIVITIES, normalize_activity
 from bahar.config.sources import ATTRIBUTION, IST, MAX_RADIUS_KM, SOURCE_NAMES
 from bahar.data.airquality import fetch_air_quality
 from bahar.data.geocode import agrees, geocode, search_radius_km
+from bahar.data import localosm
 from bahar.data.overpass import fetch_context, fetch_venues
 from bahar.data.result import Fetch
 from bahar.data.routing import fetch_travel
@@ -29,7 +30,7 @@ from bahar.llm import templates
 from bahar.llm.composer import available, compose, facts_refs, mode_for, section_refs, summary_lines
 from bahar.llm.parser import detect_lang, parse_query, recover_place, rule_based_parse
 from bahar.llm.runtime import LlmRuntime
-from bahar.llm.validator import line_section, misplaced, validate
+from bahar.llm.validator import heat_misuse, line_section, misplaced, validate
 from bahar.models import (
     Activity,
     AskResponse,
@@ -50,11 +51,16 @@ from bahar.models import (
     Status,
     Venue,
 )
+from bahar.render.map import build_snapshot, map_url, save_snapshot
 from bahar.render.text import render_answer
 
 log = logging.getLogger(__name__)
 
-GatherStatus = Literal["ok", "out_of_scope", "needs_clarification", "no_venues", "no_forecast"]
+WIDEN_STEPS = 2  # radius doublings before "no venues" (capped at MAX_RADIUS_KM)
+
+GatherStatus = Literal[
+    "ok", "out_of_scope", "needs_clarification", "no_venues", "venues_failed", "no_forecast"
+]
 
 
 class Gathered(BaseModel):
@@ -62,6 +68,8 @@ class Gathered(BaseModel):
     detail: str = ""
     engine_input: EngineInput | None = None
     degraded: list[DegradedSource] = []
+    assumptions: list[str] = []
+    osm_extract: str | None = None  # label of the local OSM extract when it supplied the geography
     latency_ms: dict[str, int] = {}
 
 
@@ -119,12 +127,30 @@ async def gather_inputs(parsed: ParsedQuery, now: datetime) -> Gathered:
     radius = min(parsed.radius_km, MAX_RADIUS_KM) if parsed.radius_km else search_radius_km(place, profile.radius_km)
     t0 = time.perf_counter()
     vf = await fetch_venues(activity, place.lat, place.lon, radius)
+    widened: list[str] = []
+    for _ in range(WIDEN_STEPS):  # nothing found (not a failure): look twice as far, up to the cap
+        wider = min(radius * 2, MAX_RADIUS_KM)
+        if vf.value != [] or wider <= radius:
+            break
+        widened.append(f"no places within {radius:g} km; widened to {wider:g} km")
+        degraded += vf.degraded
+        radius = wider
+        vf = await fetch_venues(activity, place.lat, place.lon, radius)
     latency["venues"] = _ms(t0)
     degraded += vf.degraded
+    if vf.value is None:  # the search itself failed (Overpass and the Nominatim fallback)
+        return Gathered(status="venues_failed", detail="venue search failed",
+                        degraded=degraded, latency_ms=latency)  # fmt: skip
     if not vf.value:
         return Gathered(status="no_venues", detail=f"no {activity.value} venues within {radius:g} km",
                         degraded=degraded, latency_ms=latency)  # fmt: skip
     venues = vf.value
+    assumptions: list[str] = list(widened)
+    if vf.stale_days is not None:
+        assumptions.append(f"venues from map data cached {vf.stale_days} days ago (live fetch failed)")
+    if any(d.source is SourceKey.nominatim and d.stage == "venues" for d in vf.degraded):
+        assumptions.append("OpenStreetMap map service was unavailable: venues come from a Nominatim "
+                           "text search (fewer places, no opening hours or access details)")  # fmt: skip
 
     now = now.astimezone(IST)
     days = [now.date() + timedelta(days=k) for k in range(8)]
@@ -144,6 +170,8 @@ async def gather_inputs(parsed: ParsedQuery, now: datetime) -> Gathered:
                     ("stations", st_f), ("routing", tr_f)):  # fmt: skip
         latency[f"fetch_{name}"] = f.elapsed_ms  # inside parallel_fetch
         degraded += f.degraded
+        if f.stale_days is not None and name == "context":
+            assumptions.append(f"pollution-source map data cached {f.stale_days} days ago (live fetch failed)")
     if fc_f.value is None:
         return Gathered(status="no_forecast", detail="weather forecast unavailable",
                         degraded=degraded, latency_ms=latency)  # fmt: skip
@@ -153,7 +181,9 @@ async def gather_inputs(parsed: ParsedQuery, now: datetime) -> Gathered:
         window=window, context=ctx_f.value, forecast=fc_f.value, air_quality=aq_f.value,
         stations=st_f.value, travel=tr_f.value, degraded=degraded, now=now,
     )  # fmt: skip
-    return Gathered(status="ok", engine_input=inp, degraded=degraded, latency_ms=latency)
+    local = any(e.source is SourceKey.osm_extract for e in vf.evidence)
+    return Gathered(status="ok", engine_input=inp, degraded=degraded, assumptions=assumptions,
+                    osm_extract=localosm.source_label() if local else None, latency_ms=latency)  # fmt: skip
 
 
 async def _geocode(parsed: ParsedQuery, location: str) -> Fetch[Place]:
@@ -256,9 +286,12 @@ async def _ask(runtime: LlmRuntime, req: _Request) -> AskResponse:
         return req.respond(Status.error, templates.INTERNAL_ERROR[req.lang])
     req.latency.update(g.latency_ms)
     req.degraded += g.degraded
+    req.assumptions += g.assumptions
     activity = _activity(parsed)
     if g.status == "needs_clarification":
         return req.respond(Status.needs_clarification, templates.PLACE_NOT_FOUND[req.lang])
+    if g.status == "venues_failed":
+        return req.respond(Status.error, templates.MAP_DATA_BUSY[req.lang])
     if g.status == "no_venues":
         name = activity.value if activity else ""
         return req.respond(Status.no_venues, templates.NO_VENUES[req.lang].format(activity=name))
@@ -280,18 +313,25 @@ async def _ask(runtime: LlmRuntime, req: _Request) -> AskResponse:
 
     t = time.perf_counter()
     evidence = {e.id: e for e in cited.evidence}
-    attribution = _attribution(inp)
+    attribution = _attribution(inp, g.osm_extract)
     answer = render_answer(body, evidence, req.lang, modelled=cited.facts.modelled_aq,
                            disclaimer=cited.facts.disclaimer, attribution=attribution)  # fmt: skip
     req.latency["render"] = _ms(t)
     rec = cited.recommendation
-    return req.respond(
+    resp = req.respond(
         Status(rec.status), answer, recommendation=rec,
         alternatives=[s for s in (rec.alt_venue, rec.alt_time) if s], why_not=rec.why_not,
         advice=cited.advice, hourly=cited.hourly if req.debug else _compact(res),
-        evidence=cited.evidence, grounding=grounding, sources=_sources(inp, cited.evidence),
-        attribution=attribution,
+        evidence=cited.evidence, grounding=grounding, sources=_sources(inp, cited.evidence, g.osm_extract),
+        attribution=attribution, map_url=map_url(req.query_id),
     )  # fmt: skip
+    try:  # the map is a bonus: never lose the answer over it
+        snap = build_snapshot(inp, res, resp, req.query, _compact(res), req.now)
+        await asyncio.to_thread(save_snapshot, snap)
+    except Exception:
+        log.exception("map snapshot failed")
+        resp.map_url = None
+    return resp
 
 
 async def _answer(runtime: LlmRuntime, req: _Request, cited: CitedResult, names: list[str]) -> tuple[str, Grounding]:
@@ -333,8 +373,10 @@ async def _answer(runtime: LlmRuntime, req: _Request, cited: CitedResult, names:
             return template()
         req.latency["compose" if retries == 0 else "compose_retry"] = _ms(t)
         log.info("composer %s: %d tokens in %d ms (%s)", mode, c.tokens, c.ms, c.finish)
-        problems = validate(text, allowed, names, required, req.lang, **grounded)
-        bad = misplaced(text, sections)
+        # Heat-word misuse is line-local, so it is repaired from the template line like a
+        # misplaced line instead of triggering a recompose.
+        problems = validate(text, allowed, names, required, req.lang, **{**grounded, "heat_refs": None})
+        bad = sorted(misplaced(text, sections) + heat_misuse(text, grounded["heat_refs"]))
         if not problems and not bad:
             break
         rejections.append("; ".join([*problems, *(m for _, m in bad)]))
@@ -407,9 +449,11 @@ def _compact(res: EngineResult) -> list[HourCompact]:
     ]
 
 
-def _attribution(inp: EngineInput) -> str:
+def _attribution(inp: EngineInput, osm_extract: str | None = None) -> str:
     readings = inp.stations.readings if inp.stations else []
     parts = [ATTRIBUTION]
+    if osm_extract:
+        parts.append(f"Map data: {osm_extract}")
     for src, name in (("waqi", "WAQI (aqicn.org)"), ("openaq", "OpenAQ")):
         providers = sorted({r.provider for r in readings if r.source == src and r.provider})
         if any(r.source == src for r in readings):
@@ -417,11 +461,13 @@ def _attribution(inp: EngineInput) -> str:
     return " · ".join(parts)
 
 
-def _sources(inp: EngineInput, evidence: list[Evidence]) -> list[str]:
-    used = {e.source.value for e in evidence} | {"nominatim", "overpass", "open_meteo_forecast"}
+def _sources(inp: EngineInput, evidence: list[Evidence], osm_extract: str | None = None) -> list[str]:
+    used = {e.source.value for e in evidence} | {"nominatim", "open_meteo_forecast"}
+    used.add("osm_extract" if osm_extract else "overpass")
     if inp.air_quality:
         used.add("open_meteo_air_quality")
     used |= {r.source for r in (inp.stations.readings if inp.stations else [])}
     if inp.travel and not all(t.estimated for t in inp.travel):
         used.add("osrm")
-    return [name for key, name in SOURCE_NAMES.items() if key in used]
+    return [osm_extract if key == "osm_extract" and osm_extract else name
+            for key, name in SOURCE_NAMES.items() if key in used]  # fmt: skip

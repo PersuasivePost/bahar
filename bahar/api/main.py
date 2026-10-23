@@ -12,18 +12,31 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import FastAPI, Query, Request, Response
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from bahar import __version__
+from bahar.config import budget
 from bahar.config.settings import get_settings
-from bahar.config.sources import IST
+from bahar.config.sources import ATTRIBUTION, IST
 from bahar.data.http import close_client, get_client
+from bahar.data import localosm
 from bahar.llm import templates
 from bahar.llm.composer import register_composer
 from bahar.llm.parser import register_parser
+from bahar.llm.parser import detect_lang
 from bahar.llm.runtime import LlmRuntime
-from bahar.models import AskRequest, AskResponse, Health
+from bahar.models import (
+    AskRequest,
+    AskResponse,
+    DegradedSource,
+    Grounding,
+    Health,
+    Lang,
+    SourceKey,
+    Status,
+)
 from bahar.pipeline import ask
+from bahar.render.map import load_snapshot, render_map
 
 RATE_WINDOW_S = 60.0
 
@@ -95,6 +108,16 @@ def client_ip(request: Request) -> str:
     return forwarded.strip() if forwarded and loopback else host
 
 
+def direct_loopback(request: Request) -> bool:
+    """A local caller (battery, curl) with no Cloudflare header; tunnel traffic also arrives from
+    loopback but carries CF-Connecting-IP and stays limited."""
+    host = request.client.host if request.client else ""
+    try:
+        return ipaddress.ip_address(host).is_loopback and "cf-connecting-ip" not in request.headers
+    except ValueError:
+        return False
+
+
 def rate_limited(ip: str, limit: int, now: float) -> bool:
     """Sliding window: at most `limit` requests per RATE_WINDOW_S per address."""
     hits = _hits[ip]
@@ -108,7 +131,7 @@ def rate_limited(ip: str, limit: int, now: float) -> bool:
 
 @app.middleware("http")
 async def rate_limit(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
-    if request.url.path == "/ask":
+    if request.url.path == "/ask" and not direct_loopback(request):
         limit = get_settings().rate_limit_per_min
         if rate_limited(client_ip(request), limit, time.monotonic()):
             return JSONResponse(
@@ -145,13 +168,41 @@ async def health(request: Request) -> Health:
         status="ok" if llm.health.model_loaded else "degraded",
         version=__version__,
         llm=llm.health,
+        osm_extract=localosm.source_label(),
     )
+
+
+def _error_response(query_id: str, query: str, source_detail: str) -> AskResponse:
+    lang = detect_lang(query)
+    return AskResponse(
+        query_id=query_id, status=Status.error, answer_text=templates.INTERNAL_ERROR[lang],
+        grounding=Grounding(validator_passed=True, fallback_used=False), attribution=ATTRIBUTION,
+        degraded_sources=[DegradedSource(source=SourceKey.engine, stage="api", reason="timeout",
+                                         detail=source_detail, impact="no answer")],
+    )  # fmt: skip
 
 
 async def _ask(request: Request, query: str, debug: bool) -> AskResponse:
     # query_id is ours, never the client's X-Request-ID: the map page will use it as a file name.
-    return await ask(request.app.state.llm, query, datetime.now(IST),
-                     query_id=uuid.uuid4().hex[:12], debug=debug)  # fmt: skip
+    query_id = uuid.uuid4().hex[:12]
+    try:
+        return await asyncio.wait_for(
+            ask(request.app.state.llm, query, datetime.now(IST), query_id=query_id, debug=debug),
+            budget.REQUEST_HARD_TIMEOUT_S,
+        )
+    except TimeoutError:
+        log.error("ask exceeded %g s", budget.REQUEST_HARD_TIMEOUT_S)
+        return _error_response(query_id, query, f"request exceeded {budget.REQUEST_HARD_TIMEOUT_S:g} s")
+    except Exception:
+        log.exception("ask crashed")
+        return _error_response(query_id, query, "unhandled error")
+
+
+@app.exception_handler(Exception)
+async def unhandled(request: Request, exc: Exception) -> JSONResponse:
+    """Last resort for every route: JSON instead of a dropped connection."""
+    log.error("unhandled error on %s", request.url.path, exc_info=exc)
+    return JSONResponse(status_code=500, content={"status": "error", "answer_text": templates.INTERNAL_ERROR[Lang.en]})
 
 
 @app.post("/ask")
@@ -164,3 +215,16 @@ async def ask_get(
     request: Request, q: Annotated[str, Query(min_length=1, max_length=1000)], debug: bool = False
 ) -> AskResponse:
     return await _ask(request, q, debug)
+
+
+@app.get("/map/{query_id}", response_class=HTMLResponse)
+async def map_page(query_id: str) -> HTMLResponse:
+    snap = await asyncio.to_thread(load_snapshot, query_id)
+    if snap is None:
+        return HTMLResponse("<p>This map has expired or does not exist (maps are kept for 24 h).</p>", status_code=404)
+    return HTMLResponse(render_map(snap))
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon() -> Response:
+    return Response(status_code=204)

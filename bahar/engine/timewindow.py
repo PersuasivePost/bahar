@@ -134,6 +134,11 @@ def resolve_window(
     horizon = datetime.combine(today + timedelta(FORECAST_DAYS), time(0), IST)
     assumptions: list[str] = []
 
+    if spec.now:
+        first = now.replace(minute=0, second=0, microsecond=0)
+        starts = [first + timedelta(hours=k) for k in range(w.NOW_WINDOW_H + 1)]
+        return _finish(starts, f"now (next {w.NOW_WINDOW_H} hours)", horizon, assumptions)
+
     has_time_of_day = spec.part not in (None, Part.any) or spec.hour is not None or spec.around
     if spec.day is None and not has_time_of_day:
         if spec.part is None:

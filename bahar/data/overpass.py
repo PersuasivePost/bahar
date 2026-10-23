@@ -1,7 +1,10 @@
 """Overpass API: (a) venue discovery per activity, (b) one batched context query."""
 
+import asyncio
+import logging
 import math
 import re
+import time
 from datetime import UTC, datetime
 from difflib import SequenceMatcher
 from typing import Any
@@ -9,8 +12,10 @@ from typing import Any
 import httpx
 
 from bahar.config import activities as acfg
+from bahar.config import osmtags
 from bahar.config import sources as cfg
 from bahar.data import cache
+from bahar.data.geocode import search_nominatim
 from bahar.data.http import degraded, request
 from bahar.data.result import Fetch
 from bahar.engine.geo import haversine_km
@@ -25,6 +30,8 @@ from bahar.models import (
     Venue,
 )
 
+log = logging.getLogger(__name__)
+
 VENUE_IMPACT = "no venues can be proposed"
 CONTEXT_IMPACT = (
     "pollution-source exposure (E = 0), green/water microclimate unavailable; lower confidence"
@@ -34,11 +41,10 @@ _NAME_SPLIT = re.compile(r"[\W_]+")
 _REPEATS = re.compile(r"(.)\1+")
 _KIND_KEYS = ("leisure", "natural", "tourism", "historic", "boundary", "man_made", "amenity",
               "landuse", "highway")  # fmt: skip
-_ROAD_CLASSES = ("motorway", "trunk", "primary", "secondary")
-_INDUSTRY_CLASSES = ("industrial", "landfill", "construction", "quarry")
-_GREEN_VALUES = ("forest|grass|meadow|village_green|recreation_ground|park|garden|"
-                 "nature_reserve|wood|scrub|grassland")  # fmt: skip
-_FOSSIL = "coal|gas|oil|diesel|lignite|petroleum"
+_ROAD_CLASSES = osmtags.ROAD_CLASSES
+_INDUSTRY_CLASSES = osmtags.INDUSTRY_CLASSES
+_GREEN_VALUES = "|".join(osmtags.GREEN_VALUES)
+_FOSSIL = "|".join(osmtags.FOSSIL)
 
 
 # ------------------------------------------------------------------ transport
@@ -54,16 +60,38 @@ def _reject_runtime_error(resp: httpx.Response) -> str | None:
 
 
 _mirrors = list(cfg.OVERPASS_MIRRORS)  # the last mirror that answered is tried first
+_bad_until: dict[str, float] = {}  # circuit breaker: mirror -> monotonic time it is trusted again
+_failed_at: dict[str, float] = {}
+_slots = asyncio.Semaphore(cfg.OVERPASS_MAX_CONCURRENT)
+
+
+def _ordered_mirrors(mirrors: list[str]) -> list[str]:
+    """Healthy mirrors first (last-good first); mirrors marked bad follow, the one that failed
+    longest ago first - so with every mirror bad, that one is tried first."""
+    now = time.monotonic()
+    healthy = [m for m in mirrors if _bad_until.get(m, 0.0) <= now]
+    bad = sorted((m for m in mirrors if m not in healthy), key=lambda m: _failed_at.get(m, 0.0))
+    return healthy + bad
+
+
+def _note_attempt(url: str, ok: bool) -> None:
+    if ok:
+        _bad_until.pop(url, None)
+        return
+    now = time.monotonic()
+    _bad_until[url], _failed_at[url] = now + cfg.OVERPASS_BAD_MIRROR_S, now
 
 
 async def _run(
-    query: str, stage: str, impact: str, attempt_timeout_s: float, deadline_s: float
+    query: str, stage: str, impact: str, attempt_timeout_s: float, deadline_s: float,
+    mirrors: list[str] | None = None,
 ) -> tuple[dict[str, Any] | None, DegradedSource | None]:
-    resp, failure = await request(
-        SourceKey.overpass, stage, impact, "POST", _mirrors,
-        data={"data": query}, timeout_s=attempt_timeout_s, deadline_s=deadline_s,
-        reject=_reject_runtime_error,
-    )  # fmt: skip
+    async with _slots:
+        resp, failure = await request(
+            SourceKey.overpass, stage, impact, "POST", _ordered_mirrors(mirrors or _mirrors),
+            data={"data": query}, timeout_s=attempt_timeout_s, deadline_s=deadline_s,
+            reject=_reject_runtime_error, on_attempt=_note_attempt,
+        )  # fmt: skip
     if resp is None:
         return None, failure
     answered = next((m for m in _mirrors if m.startswith(str(resp.url).split("?")[0])), None)
@@ -193,6 +221,13 @@ def _min_area_km2(v: Venue, activity: Activity) -> float:
     return acfg.MIN_AREA_KM2
 
 
+def _good_name(name: str, activity: Activity) -> bool:
+    if acfg.BAD_NAME.search(name) or sum(c.isalpha() for c in name) < acfg.MIN_NAME_LETTERS:
+        return False
+    must = acfg.NAME_MUST_MATCH.get(activity)
+    return must is None or must.search(name) is not None
+
+
 def select_candidates(venues: list[Venue], radius_km: float, activity: Activity) -> list[Venue]:
     """Drop out-of-radius and too-small area features, merge duplicates (the polygon / larger
     area wins; a Latin-script name replaces a non-Latin one), rank by distance and size
@@ -202,6 +237,7 @@ def select_candidates(venues: list[Venue], radius_km: float, activity: Activity)
         for v in venues
         if v.distance_km <= radius_km
         and (v.area_km2 is None or v.area_km2 >= _min_area_km2(v, activity))
+        and _good_name(v.name, activity)
     ]
     pool.sort(key=lambda v: -(v.area_km2 if v.area_km2 is not None else -1.0))  # polygons first
     kept: list[Venue] = []
@@ -224,22 +260,48 @@ def select_candidates(venues: list[Venue], radius_km: float, activity: Activity)
     return sorted(kept, key=rank)[: acfg.MAX_CANDIDATES]
 
 
+async def _local(what: str, *, localosm_fn: str, args: tuple[Any, ...]) -> Any:
+    """The local OSM index first; None (-> live Overpass) when it is absent, does not cover the
+    area, or fails."""
+    from bahar.data import localosm  # imports this module: loaded lazily
+
+    if localosm.extract_date() is None:
+        return None
+    try:
+        return await asyncio.to_thread(getattr(localosm, localosm_fn), *args)
+    except Exception:
+        log.exception("local OSM index failed for %s; using live Overpass", what)
+        return None
+
+
 async def fetch_venues(
     activity: Activity, lat: float, lon: float, radius_km: float
 ) -> Fetch[list[Venue]]:
+    if (local := await _local("venues", localosm_fn="fetch_venues", args=(activity, lat, lon, radius_km))) is not None:
+        return local
     key = cache.make_key(
         "venues", activity=activity.value, lat=round(lat, 3), lon=round(lon, 3), r=radius_km
     )
-    return await cache.cached(key, cache.STATIC, lambda: _fetch_venues(activity, lat, lon, radius_km))
+    res = await cache.cached_stale(
+        key, cache.STATIC, cfg.STALE_TTL_S, lambda: _fetch_venues(activity, lat, lon, radius_km)
+    )
+    if res.value is None and res.degraded and res.degraded[0].reason != "parse":
+        return await _venues_from_nominatim(activity, lat, lon, radius_km, res.degraded[0])
+    return res
 
 
 async def _fetch_venues(
     activity: Activity, lat: float, lon: float, radius_km: float
 ) -> Fetch[list[Venue]]:
-    data, failure = await _run(
-        _venue_query(activity, lat, lon, radius_km), "venues", VENUE_IMPACT,
-        cfg.VENUE_ATTEMPT_TIMEOUT_S, cfg.VENUE_DEADLINE_S,
-    )  # fmt: skip
+    started = time.monotonic()
+    query = _venue_query(activity, lat, lon, radius_km)
+    data, failure = await _run(query, "venues", VENUE_IMPACT, cfg.VENUE_ATTEMPT_TIMEOUT_S, cfg.VENUE_DEADLINE_S)
+    if failure:  # one more try on the mirror that answered last, inside the overall budget
+        await asyncio.sleep(cfg.VENUE_RETRY_PAUSE_S)
+        left = cfg.VENUE_DEADLINE_S - (time.monotonic() - started)
+        if left > 1.0:
+            data, failure = await _run(query, "venues", VENUE_IMPACT,
+                                       min(cfg.VENUE_ATTEMPT_TIMEOUT_S, left), left, _mirrors[:1])  # fmt: skip
     if failure:
         return Fetch(degraded=[failure])
     try:
@@ -258,6 +320,69 @@ async def _fetch_venues(
         for v in chosen
     ]  # fmt: skip
     return Fetch(value=chosen, evidence=evidence)
+
+
+async def _venues_from_nominatim(
+    activity: Activity, lat: float, lon: float, radius_km: float, overpass_failure: DegradedSource
+) -> Fetch[list[Venue]]:
+    """Overpass failed (not "found nothing"): search Nominatim for the activity's keywords in
+    the radius' bounding box. Fewer venues, no tags (opening hours, lit, access). The failure
+    stays in `degraded`; no value at all means both services failed."""
+    from bahar.data import localosm  # imports this module: loaded lazily
+
+    south, west, north, east = _box(lat, lon, radius_km)
+    now = datetime.now(UTC)
+    venues: list[Venue] = []
+    degraded_list = [overpass_failure]
+    for word in acfg.NOMINATIM_KEYWORDS[activity][: cfg.NOMINATIM_VENUE_KEYWORDS_MAX]:
+        hits, failure = await search_nominatim(
+            word, limit=cfg.NOMINATIM_VENUE_LIMIT, viewbox=(west, north, east, south), bounded=True
+        )
+        if failure:
+            break
+        for h in hits:
+            if not localosm.matches_first(activity, {h.get("category", ""): h.get("type", "")}):
+                continue  # Nominatim's text match also returns other kinds of place
+            if (v := _venue_from_hit(h, lat, lon)) is not None:
+                venues.append(v)
+    chosen = select_candidates(venues, radius_km, activity)
+    if not chosen:
+        return Fetch(degraded=degraded_list)
+    degraded_list.append(degraded(
+        SourceKey.nominatim, "venues", "empty",
+        "Overpass unavailable: venues found by Nominatim text search instead",
+        "fewer venues; no opening hours, lighting or access tags",
+    ))  # fmt: skip
+    evidence = [
+        Evidence(id=f"raw:nominatim:{v.id}", label=f"{v.kind} venue", value=v.name,
+                 source=SourceKey.nominatim, fetched_at=now)
+        for v in chosen
+    ]  # fmt: skip
+    return Fetch(value=chosen, degraded=degraded_list, evidence=evidence)
+
+
+def _box(lat: float, lon: float, radius_km: float) -> tuple[float, float, float, float]:
+    """(south, west, north, east) of the square around the centre."""
+    dlat = radius_km / 111.32
+    dlon = dlat / math.cos(math.radians(lat))
+    return lat - dlat, lon - dlon, lat + dlat, lon + dlon
+
+
+def _venue_from_hit(hit: dict[str, Any], lat0: float, lon0: float) -> Venue | None:
+    name = hit.get("name") or ""
+    if not name or hit.get("osm_type") not in ("node", "way", "relation"):
+        return None
+    south, north, west, east = (float(v) for v in hit["boundingbox"])  # Nominatim order
+    lat, lon = float(hit["lat"]), float(hit["lon"])
+    bounds = {"minlat": south, "maxlat": north, "minlon": west, "maxlon": east}
+    area = _bbox_area_km2(bounds)
+    return Venue(
+        id=f"osm:{hit['osm_type']}/{hit['osm_id']}", name=name,
+        kind=(hit.get("type") if hit.get("type") not in (None, "yes") else hit.get("category", "place")),
+        lat=lat, lon=lon, area_km2=area if area > 0 else None,
+        bbox=(south, west, north, east) if area > 0 else None,
+        distance_km=haversine_km(lat0, lon0, lat, lon), tags={"name": name},
+    )  # fmt: skip
 
 
 # ------------------------------------------------------------------ context
@@ -299,22 +424,7 @@ def _context_query(venues: list[Venue]) -> str:
     )
 
 
-def _classify(tags: dict[str, str]) -> tuple[str, str]:
-    """(group, cls) for the first matching rule; anything the query returned that matches no
-    other rule matched the green regex."""
-    if tags.get("highway") in _ROAD_CLASSES:
-        return "road", tags["highway"]
-    if tags.get("landuse") in _INDUSTRY_CLASSES:
-        return "industry", tags["landuse"]
-    if tags.get("power") == "plant":
-        return "power", "power_plant"
-    if tags.get("natural") == "coastline":
-        return "water", "coastline"
-    if tags.get("natural") in ("water", "wetland"):
-        return "water", "water"
-    if tags.get("waterway") in ("river", "canal"):
-        return "water", "river"
-    return "green", "green"
+_classify = osmtags.classify
 
 
 def _points(geometry: list[dict[str, float] | None]) -> list[LatLon]:
@@ -355,8 +465,10 @@ def _parse_feature(el: dict[str, Any]) -> ContextFeature | None:
 async def fetch_context(venues: list[Venue]) -> Fetch[ContextData]:
     if not venues:
         return Fetch(value=ContextData(fetched_at=datetime.now(UTC), features=[]))
+    if (local := await _local("context", localosm_fn="fetch_context", args=(venues,))) is not None:
+        return local
     key = cache.make_key("context", ids=sorted(v.id for v in venues))
-    return await cache.cached(key, cache.STATIC, lambda: _fetch_context(venues))
+    return await cache.cached_stale(key, cache.STATIC, cfg.STALE_TTL_S, lambda: _fetch_context(venues))
 
 
 async def _fetch_context(venues: list[Venue]) -> Fetch[ContextData]:

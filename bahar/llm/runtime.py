@@ -186,10 +186,18 @@ class LlmRuntime:
         """Generate after the registered static prefix `prefix`, appending `suffix`. Stops at
         `deadline` (time.perf_counter() value) if given, including time spent waiting for the
         lock."""
-        async with self._lock:
-            return await asyncio.to_thread(
-                self._complete_sync, prefix, suffix, max_tokens, grammar, deadline
-            )
+        # The lock is held by a task of its own, shielded from the caller: when a stage timeout
+        # cancels the caller, the worker thread cannot be interrupted, so the lock must stay
+        # held until it finishes - or the next request would enter llama.cpp concurrently.
+        async def job() -> Completion:
+            async with self._lock:
+                return await asyncio.to_thread(
+                    self._complete_sync, prefix, suffix, max_tokens, grammar, deadline
+                )
+
+        task = asyncio.ensure_future(job())
+        task.add_done_callback(lambda t: t.cancelled() or t.exception())  # mark retrieved
+        return await asyncio.shield(task)
 
     async def complete(
         self, prefix: str, suffix: str, max_tokens: int = 220, grammar: str | None = None

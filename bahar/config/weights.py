@@ -19,6 +19,7 @@ PART_START_HOURS: Final[dict[Part, frozenset[int]]] = {
     Part.any: frozenset(range(24)),
 }
 DEFAULT_WINDOW_H: Final = 24  # no time given -> next 24 h
+NOW_WINDOW_H: Final = 3  # "right now": the current hour through this many hours later
 DEFAULT_N_DAYS: Final = 3  # "next few days" without a number
 EXPLICIT_HOUR_SLACK_H: Final = 1  # "7 baje" -> starts 06:00-08:00, so an alt time exists
 # "around sunrise / sunset": starts from 90 min before to 30 min after the event, which
@@ -73,6 +74,10 @@ SOURCE_MERGE_M: Final = 60.0
 
 # ---------------------------------------------------------------- travel / traffic heuristic
 # No free live traffic exists for India; disclosed heuristic on OSRM free-flow durations.
+
+# A "why not" venue within this many score points of the pick is reported as a close call, not
+# a loss (documented heuristic: below the noise of the penalty weights and forecast error).
+WHY_NOT_CLOSE_SCORE_GAP: Final = 5.0
 
 TRAVEL_PEAK: Final = 1.7
 TRAVEL_SHOULDER: Final = 1.3

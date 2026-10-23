@@ -5,6 +5,7 @@ for a cold Overpass context fetch. Generation here is ~25-29 tok/s, so a full co
 from typing import Final
 
 REQUEST_BUDGET_S: Final = 45.0  # deadline for the whole /ask, from request start
+REQUEST_HARD_TIMEOUT_S: Final = 70.0  # the API gives up here with status=error
 
 # Stage timeouts (asyncio.wait_for). Each fetcher has its own HTTP timeouts and deadlines
 # inside; these only guard against a stage hanging as a whole.

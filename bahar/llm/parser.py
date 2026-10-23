@@ -346,11 +346,24 @@ def _time(t: dict[str, Any], query: str, today: date, assumptions: list[str]) ->
         assumptions.append(f"ignored hour {hour}: not a valid hour")
         t.pop("hour")
 
+    if lx.NOW.search(query):
+        t |= {"day": None, "n_days": None, "part": None, "hour": None, "around": None, "now": True}
+        assumptions.append("'now' read as the current hour and the next 3 hours")
+        return t
+
     said = _said_day(query)
     day = t.get("day")
     model_date_ok = isinstance(day, str) and day.startswith("date:") and lx.MONTH.search(query)
     if said and day not in ("this_weekend", "next_weekend") and not model_date_ok:
         t["day"] = said
+    elif said is None and day and not model_date_ok:
+        # No day word in the question: a day the model volunteers ("weekday:mon" for "evening
+        # football") is a guess, unless the words for a weekend / several days are there.
+        supported = (day in ("this_weekend", "next_weekend") and lx.WEEKEND.search(query)) or (
+            day == "next_n_days" and lx.MULTI_DAY.search(query))  # fmt: skip
+        if not supported:
+            assumptions.append(f"ignored day '{day}': the question names no day")
+            t["day"], t["n_days"] = None, None
     if (n := t.get("n_days")) is not None:  # n_days only means something with next_n_days
         if t.get("day") in (None, "today", "next_n_days"):
             t["day"], t["n_days"] = "next_n_days", min(max(n, 1), 7)
