@@ -465,9 +465,14 @@ def _parse_feature(el: dict[str, Any]) -> ContextFeature | None:
 async def fetch_context(venues: list[Venue]) -> Fetch[ContextData]:
     if not venues:
         return Fetch(value=ContextData(fetched_at=datetime.now(UTC), features=[]))
-    if (local := await _local("context", localosm_fn="fetch_context", args=(venues,))) is not None:
-        return local
     key = cache.make_key("context", ids=sorted(v.id for v in venues))
+
+    async def local() -> Fetch[ContextData]:
+        return await _local("context", localosm_fn="fetch_context", args=(venues,)) or Fetch()
+
+    if (hit := await cache.cached(cache.make_key("context_local", ids=sorted(v.id for v in venues)),
+                                  cache.STATIC, local)).value is not None:
+        return hit
     return await cache.cached_stale(key, cache.STATIC, cfg.STALE_TTL_S, lambda: _fetch_context(venues))
 
 
