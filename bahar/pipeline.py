@@ -309,6 +309,11 @@ async def _ask(runtime: LlmRuntime, req: _Request) -> AskResponse:
     t = time.perf_counter()
     cited = build_facts(inp, res, include_hourly_ids=req.debug)
     req.latency["facts"] = _ms(t)
+    if g.osm_extract:  # geography came from the local index: label it, not "overpass"
+        for e in cited.evidence:
+            if e.source is SourceKey.overpass:
+                e.source = SourceKey.osm_extract
+                e.note = f"{e.note}; {g.osm_extract}" if e.note else g.osm_extract
     body, grounding = await _answer(runtime, req, cited, _place_names(inp))
 
     t = time.perf_counter()
@@ -463,7 +468,8 @@ def _attribution(inp: EngineInput, osm_extract: str | None = None) -> str:
 
 def _sources(inp: EngineInput, evidence: list[Evidence], osm_extract: str | None = None) -> list[str]:
     used = {e.source.value for e in evidence} | {"nominatim", "open_meteo_forecast"}
-    used.add("osm_extract" if osm_extract else "overpass")
+    if osm_extract:
+        used.add("osm_extract")
     if inp.air_quality:
         used.add("open_meteo_air_quality")
     used |= {r.source for r in (inp.stations.readings if inp.stations else [])}
