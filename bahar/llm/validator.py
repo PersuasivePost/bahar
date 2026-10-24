@@ -119,6 +119,12 @@ def heat_misuse(text: str, heat_refs: Collection[str]) -> list[tuple[int, str]]:
     return out
 
 
+def garbled(text: str) -> list[tuple[int, str]]:
+    """(line index, message) for lines containing known model garble."""
+    return [(n, f"garbled phrase '{m.group()}'") for n, line in enumerate(text.splitlines())
+            if (m := lx.GARBLE.search(line))]  # fmt: skip
+
+
 def line_section(line: str, index: int, keys: Collection[str]) -> str | None:
     """Section of an answer line: HEAD for the first, else the label keyword before its colon
     ("**Avoid karein:** ..." -> "avoid karein"); None for an unlabelled line."""

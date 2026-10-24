@@ -30,7 +30,7 @@ from bahar.llm import templates
 from bahar.llm.composer import available, compose, facts_refs, mode_for, section_refs, summary_lines
 from bahar.llm.parser import detect_lang, parse_query, recover_place, rule_based_parse
 from bahar.llm.runtime import LlmRuntime
-from bahar.llm.validator import heat_misuse, line_section, misplaced, validate
+from bahar.llm.validator import garbled, heat_misuse, line_section, misplaced, validate
 from bahar.models import (
     Activity,
     AskResponse,
@@ -382,10 +382,10 @@ async def _answer(runtime: LlmRuntime, req: _Request, cited: CitedResult, names:
             return template()
         req.latency["compose" if retries == 0 else "compose_retry"] = _ms(t)
         log.info("composer %s: %d tokens in %d ms (%s)", mode, c.tokens, c.ms, c.finish)
-        # Heat-word misuse is line-local, so it is repaired from the template line like a
+        # Heat-word misuse and known garble are line-local, so it is repaired from the template line like a
         # misplaced line instead of triggering a recompose.
         problems = validate(text, allowed, names, required, req.lang, **{**grounded, "heat_refs": None})
-        bad = sorted(misplaced(text, sections) + heat_misuse(text, grounded["heat_refs"]))
+        bad = sorted(misplaced(text, sections) + heat_misuse(text, grounded["heat_refs"]) + garbled(text))
         if not problems and not bad:
             break
         rejections.append("; ".join([*problems, *(m for _, m in bad)]))

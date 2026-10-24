@@ -274,6 +274,9 @@ CLEAN_AIR_WORDS: Final = re.compile(
     _I,
 )
 CLEAN_AIR_OK: Final = frozenset({"good", "satisfactory"})  # NAQI categories fit to call clean
+# Known 1.5B-model garble in Hinglish travel clauses ("14 min se car ko away kar diya"): the
+# model mixes English "away" into a Hindi verb phrase instead of "{{eN}} door (car se)".
+GARBLE: Final = re.compile(r"\b(?:ko\s+away|away\s+kar|away\s+ho|car\s+ko\s+\w+\s+kar)\b", re.IGNORECASE)
 HEAT_REF_WINDOW: Final = 4  # words after a heat word in which its value ref must appear
 HEAT_WORDS: Final = frozenset({
     "heat", "hot", "hotter", "temperature", "garmi", "garam", "tapman",

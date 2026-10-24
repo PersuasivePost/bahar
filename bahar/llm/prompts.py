@@ -197,7 +197,7 @@ _ANSWERS: Final[dict[Lang, tuple[str, str]]] = {
 **Kyun:** {{e4}} ({{e3}}), bacchon ki safe limit {{e5}} se upar, aur UV {{e6}}. {{e7}} se haalat behtar hogi.
 **Saath rakhein:** paani, ORS, sunscreen aur cap.
 **Avoid karein:** {{e8}}, heat stress.
-**{{v2}} kyun nahi:** wahan {{e10}} ({{e9}}).""", """\
+**{{v2}} kyun nahi:** wahan {{e10}} ({{e9}}), aur {{e11}} door (car se).""", """\
 **{{v1}} best rahega, {{e2}}.**
 **Kyun:** dhool {{e3}}, {{e4}}; {{e6}} ({{e5}}); aur aas-paas {{e7}} hariyali.
 **Saath rakhein:** apna inhaler aur {{e13}} mask.
