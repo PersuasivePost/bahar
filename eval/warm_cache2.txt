@@ -1,0 +1,63 @@
+429 combinations, 384 to do
+1/384 Powai, Mumbai / hiking: ok
+2/384 Powai, Mumbai / picnic: ok
+3/384 Powai, Mumbai / event: ok
+4/384 Andheri, Mumbai / running: ok
+5/384 Andheri, Mumbai / walking: ok
+6/384 Andheri, Mumbai / cycling: ok
+7/384 Andheri, Mumbai / hiking: ok
+8/384 Andheri, Mumbai / picnic: ok
+9/384 Bandra, Mumbai / running: ok
+10/384 Bandra, Mumbai / walking: ok
+11/384 Bandra, Mumbai / cycling: ok
+12/384 Bandra, Mumbai / golf: ok
+13/384 Bandra, Mumbai / cricket: ok
+14/384 Bandra, Mumbai / football: ok
+15/384 Koregaon Park, Pune / running: ok
+16/384 Koregaon Park, Pune / walking: ok
+17/384 Koregaon Park, Pune / cycling: ok
+18/384 Koregaon Park, Pune / hiking: ok
+19/384 Koregaon Park, Pune / picnic: ok
+20/384 Koregaon Park, Pune / event: ok
+21/384 Koregaon Park, Pune / photography: ok
+22/384 Whitefield, Bengaluru / running: ok
+23/384 Whitefield, Bengaluru / cycling: ok
+24/384 Whitefield, Bengaluru / golf: ok
+25/384 Whitefield, Bengaluru / cricket: ok
+26/384 Whitefield, Bengaluru / football: ok
+27/384 Whitefield, Bengaluru / hiking: ok
+28/384 Whitefield, Bengaluru / picnic: ok
+29/384 Whitefield, Bengaluru / event: ok
+30/384 Whitefield, Bengaluru / photography: ok
+31/384 Hinjewadi, Pune / running: ok
+32/384 Hinjewadi, Pune / walking: ok
+33/384 Hinjewadi, Pune / cycling: ok
+34/384 Hinjewadi, Pune / golf: ok
+35/384 Hinjewadi, Pune / cricket: ok
+36/384 Hinjewadi, Pune / football: ok
+37/384 Hinjewadi, Pune / tennis: ok
+38/384 Hinjewadi, Pune / hiking: ok
+39/384 Hinjewadi, Pune / picnic: ok
+40/384 Hinjewadi, Pune / event: ok
+41/384 Hinjewadi, Pune / photography: ok
+42/384 Lonavala / running: ok
+43/384 Lonavala / walking: ok
+44/384 Lonavala / cycling: ok
+45/384 Lonavala / golf: ok
+46/384 Lonavala / cricket: ok
+47/384 Lonavala / football: ok
+48/384 Lonavala / tennis: ok
+49/384 Lonavala / hiking: ok
+50/384 Lonavala / picnic: ok
+51/384 Lonavala / event: ok
+52/384 Lonavala / photography: ok
+53/384 Mumbai / running: ok
+54/384 Mumbai / walking: ok
+55/384 Mumbai / cycling: ok
+56/384 Mumbai / golf: ok
+57/384 Mumbai / cricket: ok
+58/384 Mumbai / football: ok
+59/384 Mumbai / tennis: ok
+60/384 Mumbai / hiking: ok
+61/384 Mumbai / picnic: ok
+62/384 Mumbai / event: ok

@@ -30,7 +30,7 @@ from bahar.llm import templates
 from bahar.llm.composer import available, compose, facts_refs, mode_for, section_refs, summary_lines
 from bahar.llm.parser import detect_lang, parse_query, recover_place, rule_based_parse
 from bahar.llm.runtime import LlmRuntime
-from bahar.llm.validator import garbled, heat_misuse, line_section, misplaced, validate
+from bahar.llm.validator import garbled, heat_misuse, line_section, misplaced, noun_phrase_misuse, validate
 from bahar.models import (
     Activity,
     AskResponse,
@@ -355,7 +355,8 @@ async def _answer(runtime: LlmRuntime, req: _Request, cited: CitedResult, names:
     times = {e.id for e in cited.evidence if e.unit == "IST"}
     grounded = {"times": times, "air_levels": _air_levels(sheet),
                 "heat_refs": {e.id for e in cited.evidence
-                              if e.unit in ("°C", "IST") or e.label.startswith("heat-stress level")}}  # fmt: skip
+                              if e.unit in ("°C", "IST") or e.label.startswith("heat-stress level")},
+                "evidence_kinds": _evidence_kinds(cited.evidence)}  # fmt: skip
     sections = section_refs(sheet, req.lang)
     fallback = False
 
@@ -384,8 +385,10 @@ async def _answer(runtime: LlmRuntime, req: _Request, cited: CitedResult, names:
         log.info("composer %s: %d tokens in %d ms (%s)", mode, c.tokens, c.ms, c.finish)
         # Heat-word misuse and known garble are line-local, so it is repaired from the template line like a
         # misplaced line instead of triggering a recompose.
-        problems = validate(text, allowed, names, required, req.lang, **{**grounded, "heat_refs": None})
-        bad = sorted(misplaced(text, sections) + heat_misuse(text, grounded["heat_refs"]) + garbled(text))
+        problems = validate(text, allowed, names, required, req.lang,
+                            **{**grounded, "heat_refs": None, "evidence_kinds": None})
+        bad = sorted(misplaced(text, sections) + heat_misuse(text, grounded["heat_refs"])
+                     + noun_phrase_misuse(text, grounded["evidence_kinds"]) + garbled(text))
         if not problems and not bad:
             break
         rejections.append("; ".join([*problems, *(m for _, m in bad)]))
@@ -393,7 +396,9 @@ async def _answer(runtime: LlmRuntime, req: _Request, cited: CitedResult, names:
         if not problems and tpl_lang is req.lang and bad[0][0] > 0:
             # Only some section lines cite the wrong facts: swap in those template lines.
             text = _repair(text, [i for i, _ in bad], templates.answer_lines(sheet, tpl_lang), sections)
-            if validate(text, allowed, names, required, req.lang, **grounded) or misplaced(text, sections):
+            if (validate(text, allowed, names, required, req.lang, **grounded)
+                    or misplaced(text, sections)
+                    or noun_phrase_misuse(text, grounded["evidence_kinds"])):
                 return template()
             fallback = True
             break
@@ -435,6 +440,22 @@ def _air_levels(sheet: FactSheet) -> dict[str, str]:
         if it.code == "air_quality" and it.word:
             out |= {it.refs[k]: it.word for k in ("value", "category") if k in it.refs}
     return out
+
+
+def _evidence_kinds(evidence: list[Evidence]) -> dict[str, str]:
+    """Classify refs used by grounding-sensitive noun phrases."""
+    kinds = {}
+    for item in evidence:
+        label = item.label.casefold()
+        if "green cover" in label:
+            kinds[item.id] = "green"
+        elif "wbgt" in label or "heat-stress" in label:
+            kinds[item.id] = "heat"
+        elif "rain" in label or "precipitation" in label:
+            kinds[item.id] = "rain"
+        elif "pm2.5" in label or "naqi" in label or item.unit == "µg/m³":
+            kinds[item.id] = "air"
+    return kinds
 
 
 def _place_names(inp: EngineInput) -> list[str]:

@@ -21,7 +21,15 @@ _RANGE = re.compile(r"\{\{\s*([ev]\d+)\s*\}\}\s*[–-]\s*\{\{\s*([ev]\d+)\s*\}\}
 HEAD = ""  # section key of the first line
 _WORD = re.compile(r"[\wऀ-ॿ'’]+|[%°]")
 _TOKEN = re.compile(r"\{\{\s*[ev]\d+\s*\}\}|[\wऀ-ॿ'’]+")
+_GROUNDING_TOKEN = re.compile(r"\{\{\s*[ev]\d+\s*\}\}|[\wऀ-ॿ'’]+|[;:.!?]")
 MIN_ANSWER_CHARS = 40
+
+_GROUNDING_WORDS: dict[str, frozenset[str]] = {
+    "air": frozenset({"air", "dust", "fine", "hawa", "dhool"}),
+    "heat": frozenset({"heat", "garmi"}),
+    "green": frozenset({"green", "hariyali"}),
+    "rain": frozenset({"rain", "baarish"}),
+}
 
 
 def refs_in(text: str) -> list[str]:
@@ -50,13 +58,15 @@ def validate(
     times: Collection[str] = (),
     air_levels: Mapping[str, str] | None = None,
     heat_refs: Collection[str] | None = None,
+    evidence_kinds: Mapping[str, str] | None = None,
 ) -> list[str]:
     """Problems found (empty = passed). `allowed` = refs present in the facts block,
     `names` = venue / place names from this query's data, `required` = refs that must appear,
     `lang` = the language the answer must be in (checked by script), `times` = refs whose
     value is a clock time, `air_levels` = PM value / category ref -> NAQI category,
-    `heat_refs` = refs a heat word may describe (temperatures, heat levels, times). Line
-    placement is checked separately (`misplaced`)."""
+    `heat_refs` = refs a heat word may describe (temperatures, heat levels, times),
+    `evidence_kinds` = refs classified for noun-phrase grounding. Line placement is checked
+    separately (`misplaced`)."""
     problems = []
     if len(text.strip()) < MIN_ANSWER_CHARS:
         return ["answer empty or too short"]
@@ -91,7 +101,41 @@ def validate(
         problems += _clean_air_claims(text, air_levels)
     if heat_refs is not None:
         problems += [msg for _, msg in heat_misuse(text, heat_refs)]
+    if evidence_kinds is not None:
+        problems += [msg for _, msg in noun_phrase_misuse(text, evidence_kinds)]
     return problems
+
+
+def noun_phrase_misuse(
+    text: str, evidence_kinds: Mapping[str, str]
+) -> list[tuple[int, str]]:
+    """Return lines where an air, heat, green-cover, or rain phrase cites another kind.
+
+    The composer can put several references after one phrase (for example, a PM value
+    followed by its NAQI category), so all nearby references must belong to that phrase's
+    allowed kind.
+    """
+    out = []
+    for n, line in enumerate(text.splitlines()):
+        tokens = _GROUNDING_TOKEN.findall(line)
+        for i, token in enumerate(tokens):
+            word = token.casefold()
+            phrase_kind = next((kind for kind, words in _GROUNDING_WORDS.items() if word in words), None)
+            if phrase_kind is None:
+                continue
+            nearby = []
+            if i and (ref := REF.fullmatch(tokens[i - 1])):
+                nearby.append(ref.group(1))
+            for token in tokens[i + 1: i + 6]:
+                if token in {";", ":", ".", "!", "?"}:
+                    break
+                if ref := REF.fullmatch(token):
+                    nearby.append(ref.group(1))
+            wrong = [ref for ref in nearby if evidence_kinds.get(ref) != phrase_kind]
+            if wrong:
+                out.append((n, f"'{token}' cites {', '.join(wrong)} as {phrase_kind}, but evidence kind differs"))
+                break
+    return out
 
 
 def _clean_air_claims(text: str, air_levels: Mapping[str, str]) -> list[str]:
