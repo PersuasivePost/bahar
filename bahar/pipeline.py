@@ -315,6 +315,10 @@ async def _ask(runtime: LlmRuntime, req: _Request) -> AskResponse:
                 e.source = SourceKey.osm_extract
                 e.note = f"{e.note}; {g.osm_extract}" if e.note else g.osm_extract
     body, grounding = await _answer(runtime, req, cited, _place_names(inp))
+    sheet = cited.facts
+    if sheet.status == "no_safe_window" and sheet.improves_at and f"{{{{{sheet.improves_at}}}}}" not in body:
+        lb = templates.tail_lines(sheet, templates.TEMPLATE_LANG[req.lang])[0]  # the "improves" line
+        body += f"  \n{lb}"
 
     t = time.perf_counter()
     evidence = {e.id: e for e in cited.evidence}
