@@ -175,7 +175,7 @@ Other place: {{v2}} (park), {{e8}} — traffic pollution blowing in from {{e9}}
 Other time here: {{e10}} — heat-stress index {{e11}}, {{e12}}, vs {{e5}} at the pick
 Carry: your reliever inhaler; an {{e13}} mask
 Watch for: heat stress rises from {{e14}}; warm up slowly; stop if breathing gets hard
-Avoid: {{e15}} (poor air)
+Avoid: {{e15}} (air above your limit)
 Why not {{v3}} (garden): traffic pollution blowing in from {{e16}}"""
 
 # (no-safe answer, ok answer) per language
@@ -190,7 +190,7 @@ _ANSWERS: Final[dict[Lang, tuple[str, str]]] = {
 **Why:** fine dust {{e3}}, {{e4}}; {{e6}} ({{e5}}); and {{e7}} of the area around it is green.
 **Carry:** your reliever inhaler and an {{e13}} mask.
 **Watch for:** heat stress rising from {{e14}}; warm up slowly and stop if breathing gets hard.
-**Avoid:** {{e15}}, poor air.
+**Avoid:** {{e15}}, air above your limit.
 **Why not {{v3}}:** traffic pollution blows in from {{e16}}."""),
     Lang.hinglish: ("""\
 **{{e1}} mein koi safe time nahi hai. Sabse kam risk: {{v1}}, {{e2}}.**
@@ -202,7 +202,7 @@ _ANSWERS: Final[dict[Lang, tuple[str, str]]] = {
 **Kyun:** dhool {{e3}}, {{e4}}; {{e6}} ({{e5}}); aur aas-paas {{e7}} hariyali.
 **Saath rakhein:** apna inhaler aur {{e13}} mask.
 **Dhyan rakhein:** {{e14}} se heat stress badhega; dheere warm up kariye, saans phoole toh ruk jaiye.
-**Avoid karein:** {{e15}}, tab hawa kharab hai.
+**Avoid karein:** {{e15}}, hawa aapki limit se upar hai.
 **{{v3}} kyun nahi:** wahan {{e16}} se traffic ka dhuaan aata hai."""),
     Lang.hi: ("""\
 **{{e1}} में कोई सुरक्षित समय नहीं है। सबसे कम जोखिम: {{v1}}, {{e2}}।**

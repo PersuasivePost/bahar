@@ -423,7 +423,7 @@ def hour_blocks(ctx: ScoringContext, st: VenueState, hc: HourConditions) -> list
         out.append(Factor(code=R.heat, label="heat stress", delta=0, gate=True,
                           evidence_ids=[cite(store, v, hc, "wbgt", ctx.weather_at)]))  # fmt: skip
     if hc.pm25_local is not None and hc.pm25_local > ctx.pm25_limit:
-        out.append(Factor(code=R.air_quality, label="poor air", delta=0, gate=True,
+        out.append(Factor(code=R.air_quality, label="air above your limit", delta=0, gate=True,
                           evidence_ids=[st.aq_ids[hc.t]["pm25_local"]]))  # fmt: skip
     limits = light_limits(ctx, v, hc.t.date()) if darkness_gates(ctx, v) else None
     if limits and (hc.t + _HOUR <= limits[0] or hc.t >= limits[1]):

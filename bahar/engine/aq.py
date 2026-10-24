@@ -31,6 +31,15 @@ MODELLED = "modelled estimate, not a measurement"
 _NAQI_ORDER = list(NaqiCategory)
 
 
+def _ago(age: timedelta) -> str:
+    hours = age / timedelta(hours=1)
+    if hours >= 365 * 24:
+        return "over a year ago"
+    if hours >= 48:
+        return f"{hours / 24:.0f} days ago"
+    return f"{hours:.0f} h ago"
+
+
 def naqi_category(value: float, table: Sequence[tuple[float, NaqiCategory]]) -> NaqiCategory:
     for upper, category in table:
         if value <= upper:
@@ -200,8 +209,7 @@ def air_quality_assumptions(
     if any(b is None for b in biases):
         if stations and stations.stale:
             listed = "; ".join(
-                f"{s.name} ({s.distance_km:g} km, last report "
-                f"{(now - s.last_seen) / timedelta(hours=1):.0f} h ago)"
+                f"{s.name} ({s.distance_km:g} km, last report {_ago(now - s.last_seen)})"
                 for s in stations.stale
             )
             notes.append(f"No regulatory station reported in the last {src.STATION_MAX_AGE_H:g} h "
