@@ -1,0 +1,121 @@
+ 1/80 #1 ok 27.4s
+ 2/80 #2 ok 39.3s
+ 3/80 #3 ok 28.7s
+ 4/80 #4 ok 27.9s
+ 5/80 #5 no_safe_window 36.3s
+ 6/80 #6 ok 37.4s
+ 7/80 #7 ok 30.8s
+ 8/80 #8 ok 30.5s
+ 9/80 #9 ok 31.3s
+10/80 #10 ok 28.7s
+11/80 #11 ok 27.5s
+12/80 #12 ok 38.5s
+13/80 #13 ok 43.1s
+14/80 #14 ok 34.8s
+15/80 #15 ok 30.0s
+16/80 #16 ok 36.4s
+17/80 #18 no_venues 8.9s
+18/80 #17 ok 39.6s
+19/80 #19 ok 20.7s
+20/80 #20 ok 28.8s
+21/80 #21 ok 28.0s
+22/80 #22 ok 23.7s
+23/80 #23 ok 24.3s
+24/80 #24 ok 25.9s
+25/80 #25 ok 28.2s
+26/80 #26 no_safe_window 32.1s
+27/80 #27 ok 32.6s
+28/80 #28 needs_clarification 16.0s
+29/80 #29 no_safe_window 22.4s
+30/80 #30 no_safe_window 31.9s
+31/80 #31 no_safe_window 31.5s
+32/80 #32 ok 23.4s
+33/80 #33 no_safe_window 23.5s
+34/80 #34 ok 27.5s
+35/80 #35 ok 26.0s
+36/80 #36 ok 24.9s
+37/80 #38 error 7.6s
+38/80 #37 ok 22.5s
+39/80 #39 no_safe_window 26.4s
+40/80 #40 ok 28.2s
+41/80 #41 ok 24.1s
+42/80 #42 ok 23.3s
+43/80 #43 ok 27.3s
+44/80 #44 ok 26.2s
+45/80 #45 ok 23.4s
+46/80 #46 ok 27.6s
+47/80 #47 ok 27.8s
+48/80 #48 ok 25.9s
+49/80 #49 ok 24.4s
+50/80 #50 ok 21.3s
+51/80 #51 ok 20.1s
+52/80 #52 ok 20.2s
+53/80 #53 no_safe_window 21.6s
+54/80 #54 no_safe_window 25.8s
+55/80 #55 no_safe_window 26.3s
+56/80 #56 ok 22.1s
+57/80 #57 ok 16.0s
+58/80 #58 no_safe_window 17.0s
+59/80 #59 no_safe_window 18.3s
+60/80 #60 ok 18.3s
+61/80 #61 ok 18.6s
+62/80 #62 ok 19.6s
+63/80 #64 needs_clarification 2.9s
+64/80 #63 ok 17.7s
+65/80 #65 ok 16.6s
+66/80 #66 ok 30.3s
+67/80 #67 no_safe_window 29.0s
+68/80 #69 needs_clarification 4.6s
+69/80 #68 ok 25.9s
+70/80 #70 ok 17.8s
+71/80 #71 out_of_scope 6.7s
+72/80 #72 out_of_scope 2.5s
+73/80 #73 out_of_scope 3.7s
+74/80 #74 no_venues 3.9s
+75/80 #75 out_of_scope 4.3s
+76/80 #76 no_safe_window 17.9s
+77/80 #77 no_safe_window 25.3s
+78/80 #78 ok 23.1s
+79/80 #79 ok 21.1s
+80/80 #80 no_safe_window 22.3s
+
+=== 80 queries ===
+status: {'ok': 54, 'no_safe_window': 16, 'no_venues': 2, 'needs_clarification': 3, 'error': 1, 'out_of_scope': 4}
+latency s: p50 25.1  p95 38.5  max 43.1  (>30s: 16)
+validator pass 53/70 · fallback 40/70 · retries 1
+composer mode: {'full': 50, 'template': 17, 'summary': 3}
+unfilled refs: 0 answers
+venue city = expected: 60/68
+degraded sources: {'openaq': 40, 'waqi': 61}
+
+=== failures by cause ===
+error: 1
+geocode: 9
+parse: 4
+no_venues: 2
+grounding_fallback: 40
+latency: 16
+
+=== top 10 ===
+[error] #38 'golf course Bengaluru Bangalore Golf Club saturday morning'
+      status=error expected_city=Bengaluru venue=None wall=7.6s
+[geocode] #4 'cycling Sanjay Gandhi National Park weekend'
+      status=ok expected_city=Mumbai venue=Gaimukh Chowpatty wall=27.9s
+[geocode] #21 'Dehradun Rajpur road cycling morning'
+      status=ok expected_city=Dehradun venue=Charoda Talab Graden wall=28.0s
+[geocode] #28 'पुणे में रविवारी सायकलिंगसाठी चांगली जागा सांगा'
+      status=needs_clarification expected_city=Pune venue=None wall=16.0s
+[geocode] #36 'golf near Gurgaon tomorrow morning'
+      status=ok expected_city=Gurugram venue=Bhalaswa Golf Course wall=24.9s
+[geocode] #42 'hiking Matheran tomorrow'
+      status=ok expected_city=Mumbai venue=Myra Point wall=23.3s
+[geocode] #58 'Surat Dumas beach evening walk'
+      status=no_safe_window expected_city=Surat venue=Ubhrat Beach wall=17.0s
+[geocode] #60 'Guwahati Deepor Beel photography this weekend'
+      status=ok expected_city=Guwahati venue=Deepor Beel viewing point wall=18.3s
+[geocode] #78 'kal baarish hogi kya, Navi Mumbai me cricket'
+      status=ok expected_city=Navi Mumbai venue=Chapewadi Cricket Field wall=23.1s
+[geocode] #80 'Noida Sector 62 evening football'
+      status=no_safe_window expected_city=Noida venue=ASN Senior Secondary School Football Ground wall=22.3s
+
+saved /home/ashserver/AshWorks/bahar/eval/results/20261024-174158.jsonl
